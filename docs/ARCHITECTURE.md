@@ -314,11 +314,11 @@ Every guarantee in this system is code, not prompt. In the order they fire:
 |---|---|---|
 | Source data cannot be written | `mode=ro` URI + `PRAGMA query_only` | `db.py` |
 | Supervisor cannot query | no repository import exists | `agents/supervisor.py` |
-| Specialists cannot cross domains | `DOMAIN_TOOLS`, asserted disjoint | `tools/registry.py` |
+| Specialists cannot cross domains | `DOMAIN_TOOLS`, asserted disjoint | `tools/__init__.py` |
 | Context before disposition | state check → error `ToolMessage` | `agents/supervisor.py` |
 | Policy read before a verdict | `PolicyGateMiddleware` short-circuits the call | `agents/disposition.py` |
 | Verdict internally consistent | `check_disposition` | `policy.py` |
 | Identifiers well formed | `ID_PATTERNS` | `policy.py` |
-| Citations real and owned | `evidence_check.refusal_for` | `analysis/evidence_check.py` |
+| Citations real and owned | `analysis.refusal_for` | `analysis.py` |
 | Nothing irreversible unapproved | `HumanInTheLoopMiddleware` before the tool body | `agents/disposition.py` |
 | Sweep never acts unattended | `approval_mode="defer"` | `tools/disposition_tools.py` |

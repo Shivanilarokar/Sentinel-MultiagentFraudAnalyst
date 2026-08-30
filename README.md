@@ -152,13 +152,13 @@ Four tools, no database access, and the ordering is enforced rather than request
 `ToolMessage` if Context has not been asked yet.
 
 **Done when** — `test_supervisor_module_has_no_database_access` parses the module's
-import graph and asserts no repository or `sentinel.db` import exists.
+import graph and asserts no `sentinel.queries` or `sentinel.db` import exists.
 `test_supervisor_holds_exactly_four_tools` counts the wrappers.
 
 ### 3 · Asynchronous queue sweep &nbsp;`required`
 
 The three-tool pattern: `start_queue_sweep`, `check_sweep_status`,
-`collect_sweep_results` (`sentinel/tools/sweep_tools.py`).
+`collect_sweep_results` (`sentinel/sweep.py`).
 
 Starting a sweep does three cheap things — one `SELECT DISTINCT account_id FROM
 alerts`, one job row, one `Thread.start()` — and returns.
@@ -333,7 +333,7 @@ runtime/               everything written at run time (gitignored)
 `triggered_at`, by up to twelve hours. A window measured backwards from `triggered_at`
 therefore excludes the activity that caused the alert — on A00985 it reports 36,869
 across two transactions when the real episode is 216,099 across five. Every window is
-anchored on an incident window instead. See `sentinel/repositories/alerts_repo.py`.
+anchored on an incident window instead. See `sentinel/queries.py`.
 
 **Timing is what makes a note evidence.** Across alerted accounts, 248 notes were
 filed *before* the incident and 137 *after*. A note filed before is a pre-existing

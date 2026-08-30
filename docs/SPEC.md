@@ -158,7 +158,7 @@ and evidence audit can work from identifiers instead of re-parsing prose.
 |---|---|
 | Source database never modified | `file:...?mode=ro` URI + `PRAGMA query_only=1`; writes go to a separate `runtime/actions.db`; SHA-256 verified |
 | Supervisor holds exactly four tools | `build_sentinel` passes only the four wrappers; its module imports no repository |
-| Specialists hold only their own tools | `tools/registry.py` `DOMAIN_TOOLS`; asserted pairwise disjoint |
+| Specialists hold only their own tools | `tools/__init__.py` `DOMAIN_TOOLS`; asserted pairwise disjoint |
 | Context is read before disposition | `consult_disposition_officer` inspects `specialists_consulted` and returns an error `ToolMessage` if `context` is absent |
 | Policy is read before a verdict is written | `PolicyGateMiddleware({"record_disposition": "evidence_standards"})` short-circuits `wrap_tool_call` |
 | `insufficient_evidence` names its gap | `policy.check_disposition` refuses an empty `information_required` |

@@ -13,7 +13,7 @@ proves it. Run `pytest -q` to execute all of them; no API key required.
 | | |
 |---|---|
 | Implementation | `sentinel/agents/{behaviour,context,network,disposition}.py` — one module each, each defining its own `PROMPT` and `build()` |
-| Tool ownership | `sentinel/tools/registry.py` → `DOMAIN_TOOLS` (7 / 4 / 3 / 3 tools) |
+| Tool ownership | `sentinel/tools/__init__.py` → `DOMAIN_TOOLS` (7 / 4 / 3 / 3 tools) |
 | Proof | `test_specialist_tool_sets_are_pairwise_disjoint`, `test_each_specialist_has_its_own_module_with_its_own_prompt`, `test_context_holds_the_narrative_tools_and_no_transaction_tools`, `test_disposition_writes_and_does_not_read` |
 | By eye | `sentinel doctor` prints all four sets and confirms disjointness |
 
@@ -37,7 +37,7 @@ holds no read tool at all.
 | | |
 |---|---|
 | Implementation | `sentinel/agents/supervisor.py` — four `consult_*` wrappers, nothing else |
-| No DB access | The module imports no repository and no `sentinel.db` |
+| No DB access | The module imports neither `sentinel.queries` nor `sentinel.db` |
 | Ordering | `consult_disposition_officer` reads `specialists_consulted` and returns an error `ToolMessage` if `context` is absent — a rule, not a request |
 | Proof | `test_supervisor_module_has_no_database_access` (parses the import graph), `test_supervisor_holds_exactly_four_tools`, `test_disposition_is_blocked_until_context_has_been_consulted` |
 
@@ -60,7 +60,7 @@ Editing a `.md` changes behaviour with no code change and no restart.
 
 | | |
 |---|---|
-| Implementation | `sentinel/sweep.py` + `sentinel/tools/sweep_tools.py` (the three-tool pattern) |
+| Implementation | `sentinel/sweep.py` (the three-tool pattern) |
 | Start path | one `SELECT DISTINCT`, one job row, one `Thread.start()` — fast by construction |
 | **Measured** | **0.041 s** |
 | Isolation | one `run_case` per account, each with its own `thread_id` (`job_id:account_id`) |
@@ -90,7 +90,7 @@ Every row in `DISPOSITIONS.md` carries its cited ids.
 ### 2b · Lookalike pairs separated — 12 pts
 > *"Both members of ≥2 pairs called correctly; reasoning names deciding evidence"*
 
-`sentinel/analysis/lookalikes.py` builds a signature from **numeric facts only** —
+`sentinel/analysis.py` builds a signature from **numeric facts only** —
 rules fired, transaction-count and country buckets, whether any device was under 24
 hours old, whether anything ran at night, and the incident-to-baseline ratio.
 Deliberately no case notes: the point is to group accounts the arithmetic cannot
@@ -119,7 +119,7 @@ Proof: `test_insufficient_evidence_must_name_what_would_resolve_it`,
 
 ### Evidence traceable — 6 pts
 Every claim carries an `EvidenceRef` with a real identifier.
-`sentinel/analysis/evidence_check.py` resolves each one back to a row through the
+`sentinel/analysis.py` resolves each one back to a row through the
 correct join — notes and prior cases via `customer_id`, disputes via `txn_id`.
 Output: `reports/evidence_audit.md`.
 
@@ -194,6 +194,6 @@ mule-ring-versus-family-tablet is a policy judgement, so Network gets the loader
 **The three sweep tools sit on the operator surface, not on the supervisor.**
 RUBRIC.md requires *"four tools maximum"* and the supervisor already holds four
 specialists; adding start/status/collect would make seven and forfeit the 7 points it
-is scored against. They remain real `@tool`s in `sentinel/tools/sweep_tools.py`,
+is scored against. They remain real `@tool`s in `sentinel/sweep.py`,
 reachable from the CLI and the API. The sweep *drives* the supervisor — one isolated
 invocation per account — which is what the brief's `SUP ==> SWEEP` edge describes.

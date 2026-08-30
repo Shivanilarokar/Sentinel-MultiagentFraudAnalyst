@@ -60,32 +60,25 @@ classDiagram
         +reset()
     }
 
-    class AlertsRepo {
-        +for_account(id) list
+    class Queries {
+        <<module - all SQL, no LLM>>
         +incident_window(id) dict
+        +alerts_for(id) list
         +trigger_transactions(id) list
         +queue() list
-    }
-    class TransactionsRepo {
+        +profile(id) dict
         +incident_transactions(id) list
         +velocity(id, hours) dict
         +baseline(id) dict
         +geo_pattern(id) list
         +device_usage(id) list
         +limit_utilisation(id) dict
-    }
-    class NarrativeRepo {
         +case_notes(id) list
         +disputes(id) list
         +prior_cases(id) list
-    }
-    class NetworkRepo {
         +shared_devices(id) list
         +device_peers(id) list
         +merchant_overlap(id) list
-    }
-    class CustomerRepo {
-        +profile(id) dict
     }
 
     class Policy {
@@ -177,23 +170,16 @@ classDiagram
         +single_agent_estimate() dict
     }
     class UsageLedger {
-        +record(account_id, agent, result) dict
-        +totals() dict
+        <<in db.py - primitives only>>
+        +record_usage(account_id, agent, ...) None
+        +usage_totals() dict
     }
 
-    AlertsRepo --> ReadOnlyDB
-    TransactionsRepo --> ReadOnlyDB
-    NarrativeRepo --> ReadOnlyDB
-    NetworkRepo --> ReadOnlyDB
-    CustomerRepo --> ReadOnlyDB
-    TransactionsRepo --> AlertsRepo : incident window
-    NetworkRepo --> AlertsRepo : incident window
+    Queries --> ReadOnlyDB
 
-    BehaviourAgent --> TransactionsRepo : via @tool
-    BehaviourAgent --> AlertsRepo : via @tool
-    ContextAgent --> NarrativeRepo : via @tool
-    ContextAgent --> CustomerRepo : via @tool
-    NetworkAgent --> NetworkRepo : via @tool
+    BehaviourAgent --> Queries : via @tool
+    ContextAgent --> Queries : via @tool
+    NetworkAgent --> Queries : via @tool
     DispositionAgent --> HardRules
     DispositionAgent --> EvidenceAuditor : validates citations
     DispositionAgent --> ActionsDB : writes
@@ -219,20 +205,18 @@ classDiagram
 
     Disposition "1" --> "*" EvidenceRef
     EvidenceAuditor --> ReadOnlyDB
-    LookalikeFinder --> AlertsRepo
-    LookalikeFinder --> TransactionsRepo
+    LookalikeFinder --> Queries
     TokenModel --> UsageLedger
 ```
 
-Note what the diagram does *not* contain: an edge from `Supervisor` to any repository.
-That absence is the requirement, and `tests/test_architecture.py` asserts it by
-parsing the module's import graph.
+Note what the diagram does *not* contain: an edge from `Supervisor` to `Queries` or
+to either database. That absence is the requirement, and `tests/test_architecture.py`
+asserts it two ways - by parsing the supervisor module's import graph, and by reading
+which tool objects the supervisor is actually handed.
 
 ---
 
 ## 3 · One case
-
-![sequence](../docs/architecture.png)
 
 ```mermaid
 sequenceDiagram

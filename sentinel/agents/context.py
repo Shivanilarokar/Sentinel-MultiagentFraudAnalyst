@@ -38,7 +38,7 @@ somebody typed, and finding it is your entire job.
 2. `get_case_notes`. Read every note in full. This is the tool that decides cases.
 3. `get_disputes` for the customer's own words about charges they challenged.
 4. `get_prior_cases` for how earlier investigations closed.
-5. Load the `narrative_reading` policy before you conclude. It is the desk's
+5. Call `load_policy(["narrative_reading"])` before you conclude. It is the desk's
    guide to reading these records, and it will change how you weigh them.
 
 ## The three tests every explanation must pass

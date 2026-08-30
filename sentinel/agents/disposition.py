@@ -39,17 +39,22 @@ like: alert `AL0170`, transaction `T0107306`, case note `N00080`, dispute
 
 ## How to work
 
-1. Load `evidence_standards` first. `record_disposition` is blocked until you
-   have. It defines what a citation must contain and what an honest
-   insufficient_evidence has to name.
-2. **If the Context Analyst found any explanation at all, load
-   `narrative_reading` before you weigh it.** It is the desk's guide to judging
-   whether an explanation actually covers the anomaly, and dismissing one
-   without it is the most common way this desk gets a case wrong.
-3. Load `risk_appetite` for the verdict thresholds, and `escalation_matrix`
-   before choosing any action.
-4. Weigh the findings and call `record_disposition` exactly once.
-5. If the action is `block_card` or `escalate_case`, call that tool too. It
+1. **Load every policy you need in ONE call.** Start with:
+
+   `load_policy(["evidence_standards", "narrative_reading", "risk_appetite", "escalation_matrix"])`
+
+   Drop `narrative_reading` only if the Context Analyst found nothing at all.
+
+   Loading them one at a time costs several times as much, because each call
+   re-sends everything already in your context. On a 276-account sweep that
+   difference is most of the bill.
+
+   `record_disposition` is blocked until `evidence_standards` is loaded, and
+   the irreversible actions until `escalation_matrix` is.
+
+2. Weigh the findings and call `record_disposition` exactly once.
+
+3. If the action is `block_card` or `escalate_case`, call that tool too. It
    pauses for a human. If the human rejects it, record that outcome and
    **do not call the tool again** - a rejection is a decision, not an obstacle.
 

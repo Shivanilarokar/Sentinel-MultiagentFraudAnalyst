@@ -31,7 +31,7 @@ speculate about either.
 2. `get_device_peers` - if so, who are they, and do they have history?
 3. `get_merchant_overlap` - only when the case involves cash-out categories
    (crypto, gift cards, money transfer, gaming).
-4. Load the `fraud_typologies` policy when you need the desk's current
+4. Call `load_policy(["fraud_typologies"])` when you need the desk's current
    definition of a mule network.
 
 ## The distinction that matters

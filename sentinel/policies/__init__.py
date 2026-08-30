@@ -116,41 +116,57 @@ class PolicyState(AgentState):
 
 
 @tool
-def load_policy(policy_name: str, runtime: ToolRuntime) -> Command:
-    """Load the full text of a fraud-desk policy document into your context.
+def load_policy(policy_names: list[str], runtime: ToolRuntime) -> Command:
+    """Load one or more fraud-desk policy documents into your context.
 
-    Call this BEFORE deciding anything the document governs. These files carry
+    Call this BEFORE deciding anything the documents govern. These files carry
     the desk's current thresholds, typologies and evidence standards. You
     cannot infer them from the data, so guessing instead of loading is an
     error that will show up in your reasoning.
 
-    Args:
-        policy_name: One of the names listed under "Available policy documents".
-    """
-    for policy in discover_policies():
-        if policy["name"] == policy_name:
-            _record_load(policy_name)
-            return Command(
-                update={
-                    "messages": [
-                        ToolMessage(
-                            content=f"# Policy loaded: {policy_name}\n\n{policy['content']}",
-                            tool_call_id=runtime.tool_call_id,
-                        )
-                    ],
-                    "policies_loaded": [policy_name],
-                }
-            )
+    **Ask for every document you expect to need in a single call.** Each
+    separate call re-sends everything already in your context, so loading four
+    documents one at a time costs several times what loading them together
+    does. `load_policy(["evidence_standards", "risk_appetite"])` is one round
+    trip; two calls are two.
 
-    available = ", ".join(p["name"] for p in discover_policies())
+    Args:
+        policy_names: Names from "Available policy documents". Pass a list even
+            for one, e.g. ["evidence_standards"].
+    """
+    if isinstance(policy_names, str):  # tolerate a bare name
+        policy_names = [policy_names]
+
+    available = {p["name"]: p for p in discover_policies()}
+    sections: list[str] = []
+    loaded: list[str] = []
+    missing: list[str] = []
+
+    for name in policy_names:
+        policy = available.get(name)
+        if policy is None:
+            missing.append(name)
+            continue
+        _record_load(name)
+        loaded.append(name)
+        sections.append(f"# Policy loaded: {name}\n\n{policy['content']}")
+
+    if missing:
+        sections.append(
+            f"No policy named {', '.join(repr(m) for m in missing)}. "
+            f"Available: {', '.join(available)}"
+        )
+
     return Command(
         update={
             "messages": [
                 ToolMessage(
-                    content=f"No policy named '{policy_name}'. Available: {available}",
+                    content="\n\n---\n\n".join(sections)
+                    or f"Nothing loaded. Available: {', '.join(available)}",
                     tool_call_id=runtime.tool_call_id,
                 )
-            ]
+            ],
+            "policies_loaded": loaded,
         }
     )
 
@@ -204,8 +220,10 @@ class PolicyCatalogMiddleware(AgentMiddleware[PolicyState]):
             "\n\n## Available policy documents\n\n"
             f"{policy_catalog(policies)}\n"
             f"{status}\n\n"
-            "Call `load_policy(<name>)` to read one in full before you rely on "
-            "what it covers. Do not guess at policy you have not read."
+            "Call `load_policy([names])` to read them in full before you rely on "
+            "what they cover. Ask for every document you expect to need in ONE "
+            "call - separate calls re-send your whole context each time. "
+            "Do not guess at policy you have not read."
         )
         base = request.system_message
         content = (list(base.content_blocks) if base else []) + [

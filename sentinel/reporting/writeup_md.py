@@ -132,6 +132,54 @@ def write(path: Path | None = None) -> Path:
         "read tool is called exactly once per account, with no repeated calls and no",
         "wasted turns. A real one-agent run would be worse.",
         "",
+        "### Where the cost actually went, and why the ratio is not larger",
+        "",
+        "The honest reading of the table above is that this system did **not** achieve",
+        "the order-of-magnitude saving the architecture is capable of, and the reason is",
+        "worth stating plainly because it is the same failure the design exists to",
+        "prevent - just relocated.",
+        "",
+        "| agent | invocations | tokens | per invocation |",
+        "|---|---:|---:|---:|",
+    ]
+    for row in totals["per_agent"]:
+        per_call = int(row["total_tokens"] / row["invocations"]) if row["invocations"] else 0
+        lines.append(
+            f"| {row['agent']} | {row['invocations']:,} | {row['total_tokens']:,} | "
+            f"**{per_call:,}** |"
+        )
+
+    policy_loads = actions.query(
+        "SELECT COUNT(*) * 1.0 / COUNT(DISTINCT account_id) FROM policy_loads "
+        "WHERE agent = 'disposition'"
+    )
+    avg_loads = round(policy_loads[0][0], 1) if policy_loads and policy_loads[0][0] else 0
+
+    lines += [
+        "",
+        "The three reading specialists are cheap - 4,000 to 15,000 tokens each. The",
+        "**disposition officer is not**, and it accounts for roughly two thirds of the",
+        f"entire sweep. It loaded {avg_loads} policy documents per account, and in the run",
+        "measured above it loaded them **one tool call at a time**.",
+        "",
+        "Every one of those calls re-sends everything already in context. Four documents",
+        "totalling ~7,800 tokens, loaded across four turns, cost far more than 7,800",
+        "tokens - they cost the running sum. That is precisely the quadratic accumulation",
+        "described at the top of this section, occurring *inside* a specialist, with",
+        "policy documents as the accumulating material instead of database rows.",
+        "",
+        "The isolation between specialists worked exactly as designed: 88% of what they",
+        "produced was discarded at the boundary. The waste is one level down, and the",
+        "boundary measurement does not surface it - which is itself a lesson about what",
+        "that metric does and does not tell you.",
+        "",
+        "**The fix, now implemented:** `load_policy` takes a list, so the four documents",
+        "arrive in a single tool call and the accumulation collapses from four turns to",
+        "one. The prompt asks for them in one call and explains why. This was found by",
+        "reading the measured ledger after the sweep rather than by inspection, and the",
+        "figures above are from *before* the fix - they are reported as measured rather",
+        "than re-run, because the sweep exhausted the account's API credits.",
+        "",
         "## 3. Verdicts",
         "",
         "| verdict | accounts | share |",

@@ -41,7 +41,7 @@ contaminates their finding.
 4. Then whichever of `get_device_history`, `get_geography`,
    `get_high_risk_merchant_activity`, `get_limit_utilisation` the fired rules
    actually call for. Do not run all of them out of habit.
-5. Load the `fraud_typologies` policy when the pattern is not obvious, to
+5. Call `load_policy(["fraud_typologies"])` when the pattern is not obvious, to
    check the shape against the desk's current typologies.
 
 ## What actually discriminates

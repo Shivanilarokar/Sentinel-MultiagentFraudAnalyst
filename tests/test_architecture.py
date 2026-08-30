@@ -261,3 +261,28 @@ def test_sweep_mode_never_executes_an_irreversible_action(mode):
     disposition_tools.set_approval_mode(mode)
     assert disposition_tools.approval_mode() == mode
     disposition_tools.set_approval_mode("interactive")
+
+
+def test_every_state_key_a_wrapper_writes_has_a_reducer():
+    """Parallel consults write the same keys in one step.
+
+    Without a reducer LangGraph raises InvalidUpdateError, rejects the step,
+    and leaves an assistant message holding tool_calls that no tool message
+    answers - which fails the next model call with a 400. Six accounts were
+    lost to that chain before this was fixed.
+    """
+    import typing
+
+    from sentinel.agents.state import SupervisorState
+
+    hints = typing.get_type_hints(SupervisorState, include_extras=True)
+    for key in ("account_id", "findings", "specialists_consulted"):
+        annotation = hints[key]
+        # NotRequired[Annotated[T, reducer]] -> unwrap NotRequired first
+        args = typing.get_args(annotation)
+        inner = args[0] if args else annotation
+        assert hasattr(inner, "__metadata__"), (
+            f"state key '{key}' is written by more than one wrapper in a single "
+            f"step and has no reducer"
+        )
+        assert callable(inner.__metadata__[0]), f"'{key}' reducer is not callable"

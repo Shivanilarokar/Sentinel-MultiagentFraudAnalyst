@@ -12,13 +12,28 @@ Each specialist module owns its own system prompt, its own tool list and its
 own middleware, so "each agent has its own prompt and only the tools for its
 own domain" is visible in the file layout rather than buried in a factory.
 
-`state.py` holds the supervisor's state schema. `_boundary.py` holds the single
-function that isolates a specialist and returns only its final message.
+`_boundary.py` holds the single function that isolates a specialist and returns
+only its final message; `supervisor.py` holds the state schema.
 """
 
 from __future__ import annotations
 
-from sentinel.agents.state import SupervisorState
-from sentinel.agents.supervisor import build_sentinel
+from sentinel.agents._boundary import (
+    FINAL_MESSAGE_CONTRACT,
+    consult,
+    final_message_text,
+    final_text,
+    message_text,
+)
+from sentinel.agents.supervisor import SPECIALISTS, SupervisorState, build_sentinel
 
-__all__ = ["build_sentinel", "SupervisorState"]
+__all__ = [
+    "build_sentinel",
+    "SupervisorState",
+    "SPECIALISTS",
+    "consult",
+    "final_message_text",
+    "final_text",
+    "message_text",
+    "FINAL_MESSAGE_CONTRACT",
+]

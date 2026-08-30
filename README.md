@@ -38,7 +38,7 @@ pip install -e ".[dev]"
 cp .env.example .env                                 # add your OPENAI_API_KEY
 
 sentinel doctor                                      # environment, DB integrity, tool isolation
-pytest -q                                            # 86 conformance tests, no API key needed
+pytest -q                                            # 92 conformance tests, no API key needed
 ```
 
 Two modes, exactly as the assignment specifies:
@@ -305,26 +305,21 @@ HTTP mirrors all of it: `uvicorn sentinel.api:app --reload`, docs at `/docs`.
 ```
 sentinel/
   config.py            paths, models, rate limits, the frozen clock
-  db.py                ReadOnlyDB (mode=ro + query_only + sha256) | ActionsDB
-  models.py            Verdict, Confidence, EvidenceRef, Disposition
-  policy.py            the machine-checkable rules
-  messages.py          message-text helpers
-  case.py              run_case / resume_case - the single entry point
-  sweep.py             background job runner
-  usage.py             token ledger and boundary measurement
+  db.py                ReadOnlyDB (mode=ro + query_only + sha256) | ActionsDB | token ledger
+  queries.py           every SQL query, grouped by domain. No LLM.
+  policy.py            Verdict, Confidence, EvidenceRef, Disposition + the hard rules
+  sweep.py             run_case / resume_case, and the background queue sweep
+  analysis.py          evidence audit, lookalike pairs, token model
+  reports.py           the four generated deliverables
   cli.py  api.py       operator surfaces
   agents/
     behaviour.py context.py network.py disposition.py   one prompt each
     supervisor.py      four tools, no DB access
     _boundary.py       the isolation boundary
-    state.py           SupervisorState
-  tools/               one module per domain + registry + sweep tools
-  repositories/        pure SQL, no LLM
+  tools/               one module per domain, plus the registry in __init__
   policies/            five editable .md policy documents
-  analysis/            evidence_check, lookalikes, token_model
-  reporting/           the four generated deliverables
-tests/                 86 offline conformance tests
-docs/                  SPEC.md, architecture.png, transcripts/
+tests/                 92 offline conformance tests
+docs/                  SPEC.md, ARCHITECTURE.md, RUBRIC-MAPPING.md, architecture.png, transcripts/
 data/sentinel.db       read-only, hash-verified
 runtime/               everything written at run time (gitignored)
 ```

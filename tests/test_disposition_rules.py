@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from sentinel.models import EvidenceRef
+from sentinel.policy import EvidenceRef
 from sentinel.policy import check_disposition
 
 LONG = (

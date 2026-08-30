@@ -72,7 +72,7 @@ def test_limit_restricts_the_work_list(monkeypatch, clean_jobs):
 
 def test_each_account_gets_its_own_thread_id(monkeypatch, clean_jobs):
     """Isolated contexts: two accounts must never share a conversation."""
-    from sentinel.case import thread_for
+    from sentinel.sweep import thread_for
 
     assert thread_for("A00001", "job_x") != thread_for("A00002", "job_x")
     assert thread_for("A00001", "job_x") != thread_for("A00001", "job_y")
@@ -88,17 +88,15 @@ def test_the_worker_thread_is_not_a_daemon(monkeypatch, clean_jobs):
 
 def test_a_failing_account_does_not_abort_the_job(clean_jobs, monkeypatch):
     """One bad account must not take the queue down with it."""
-    from sentinel import case as case_module
-
     calls = []
 
     def flaky(account_id, **kwargs):
         calls.append(account_id)
         if len(calls) == 1:
             raise RuntimeError("boom")
-        return case_module.CaseResult(account_id=account_id, status="completed")
+        return sweep.CaseResult(account_id=account_id, status="completed")
 
-    monkeypatch.setattr(case_module, "run_case", flaky)
+    monkeypatch.setattr(sweep, "run_case", flaky)
     job_id = sweep._new_job(3)
     sweep._work_queue(job_id, ["A00000", "A00001", "A00002"], workers=1)
 

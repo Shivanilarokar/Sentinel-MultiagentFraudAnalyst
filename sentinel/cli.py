@@ -24,9 +24,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from sentinel import config, sweep as sweep_module, usage
-from sentinel.case import describe_interrupt, resume_case, run_case
-from sentinel.db import actions, db
+from sentinel import analysis, config, reports, sweep as sweep_module
+from sentinel.sweep import describe_interrupt, resume_case, run_case
+from sentinel.db import actions, db, usage_totals
 
 app = typer.Typer(add_completion=False, help="Multi-agent fraud triage for the Sentinel queue.")
 analyse_app = typer.Typer(help="Checks that run over recorded results.")
@@ -42,7 +42,7 @@ console = Console()
 def doctor() -> None:
     """Check the environment, the database and the agent wiring before a run."""
     from sentinel.policies import discover_policies, policy_catalog
-    from sentinel.tools.registry import disjointness_report
+    from sentinel.tools import disjointness_report
 
     console.print("[bold]Environment[/bold]")
     key_set = bool(config._first_env("OPENAI_API_KEY", "OPEN_AI_API_KEY"))
@@ -280,9 +280,8 @@ def approvals() -> None:
 @analyse_app.command("evidence")
 def analyse_evidence() -> None:
     """Re-check every citation on every recorded disposition against the database."""
-    from sentinel.analysis import evidence_check
 
-    audit = evidence_check.audit_all()
+    audit = analysis.audit_all()
     console.print(
         f"{audit['citations_verified']}/{audit['citations_checked']} citations verified "
         f"({audit['pass_rate_pct']}%) across {audit['accounts_audited']} accounts"
@@ -296,9 +295,8 @@ def analyse_evidence() -> None:
 @analyse_app.command("lookalikes")
 def analyse_lookalikes(limit: int = typer.Option(12)) -> None:
     """Accounts with identical alert signatures, and whether we called them differently."""
-    from sentinel.analysis import lookalikes
 
-    pairs = lookalikes.separated_pairs()
+    pairs = analysis.separated_pairs()
     console.print(f"{len(pairs)} matched pairs with identical signatures and opposite verdicts\n")
     for pair in pairs[:limit]:
         console.print(f"[bold]{pair['signature']}[/bold]")
@@ -314,9 +312,8 @@ def analyse_lookalikes(limit: int = typer.Option(12)) -> None:
 @analyse_app.command("tokens")
 def analyse_tokens() -> None:
     """Measured sweep cost, and the single-agent comparison."""
-    from sentinel.analysis import token_model
 
-    totals = usage.totals()
+    totals = usage_totals()
     table = Table("agent", "runs", "tokens", "chars inside", "chars crossed")
     for row in totals["per_agent"]:
         table.add_row(
@@ -329,7 +326,7 @@ def analyse_tokens() -> None:
         f"total {overall['total_tokens']:,} tokens over {overall['accounts']} accounts; "
         f"{overall['discarded_at_boundary_pct']}% of specialist output discarded at the boundary"
     )
-    console.print(json.dumps(token_model.single_agent_estimate(), indent=1))
+    console.print(json.dumps(analysis.single_agent_estimate(), indent=1))
 
 
 # --------------------------------------------------------------------------
@@ -340,17 +337,18 @@ def report(
     what: str = typer.Argument("all", help="all | dispositions | cases | writeup | evidence")
 ) -> None:
     """Generate the deliverables from recorded results."""
-    from sentinel.reporting import cases_md, dispositions_md, evidence_audit_md, writeup_md
 
     made = []
-    if what in ("all", "dispositions"):
-        made.append(dispositions_md.write())
-    if what in ("all", "evidence"):
-        made.append(evidence_audit_md.write())
-    if what in ("all", "cases"):
-        made.append(cases_md.write())
-    if what in ("all", "writeup"):
-        made.append(writeup_md.write())
+    if what == "all":
+        made = reports.write_all()
+    elif what == "dispositions":
+        made = [reports.write_dispositions()]
+    elif what == "evidence":
+        made = [reports.write_evidence_audit()]
+    elif what == "cases":
+        made = [reports.write_cases()]
+    elif what == "writeup":
+        made = [reports.write_writeup()]
     for path in made:
         console.print(f"[green]wrote[/green] {path}")
 

@@ -6,8 +6,8 @@ a claim from a fact.
 
 from __future__ import annotations
 
-from sentinel.analysis.evidence_check import check_ref, refusal_for
-from sentinel.models import EvidenceRef
+from sentinel.analysis import check_ref, refusal_for
+from sentinel.policy import EvidenceRef
 
 REAL_NOTE = "N00080"          # belongs to the customer behind A00985
 REAL_ALERT_985 = "AL0170"     # A00985's alert

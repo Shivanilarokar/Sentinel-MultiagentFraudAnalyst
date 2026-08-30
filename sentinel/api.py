@@ -28,10 +28,9 @@ from typing import Any
 from fastapi import Body, FastAPI, HTTPException
 
 from sentinel import sweep as sweep_module
-from sentinel import usage
-from sentinel.analysis import evidence_check, lookalikes, token_model
-from sentinel.case import describe_interrupt, resume_case, run_case
-from sentinel.db import actions, db
+from sentinel import analysis
+from sentinel.sweep import describe_interrupt, resume_case, run_case
+from sentinel.db import actions, db, usage_totals
 
 app = FastAPI(
     title="Sentinel",
@@ -160,16 +159,16 @@ def approvals() -> list[dict]:
 @app.get("/analysis/evidence")
 def analysis_evidence() -> dict:
     """Every citation, re-checked against the database."""
-    return evidence_check.audit_all()
+    return analysis.audit_all()
 
 
 @app.get("/analysis/lookalikes")
 def analysis_lookalikes() -> dict:
     """Accounts with identical signatures, and where our verdicts diverge."""
-    return {"summary": lookalikes.summary(), "pairs": lookalikes.separated_pairs()}
+    return {"summary": analysis.lookalike_summary(), "pairs": analysis.separated_pairs()}
 
 
 @app.get("/analysis/tokens")
 def analysis_tokens() -> dict:
     """Measured cost, and the single-agent comparison."""
-    return {"measured": usage.totals(), "single_agent_estimate": token_model.single_agent_estimate()}
+    return {"measured": usage_totals(), "single_agent_estimate": analysis.single_agent_estimate()}

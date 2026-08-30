@@ -236,3 +236,75 @@ class ActionsDB:
 
 
 actions = ActionsDB()
+
+
+# --------------------------------------------------------------------------
+# The token ledger
+# --------------------------------------------------------------------------
+# Two numbers matter for the write-up, and they are different things.
+#
+# **Tokens.** Summed from the model's own `usage_metadata`. Not an estimate:
+# the provider's count of what it actually processed.
+#
+# **The boundary.** How many characters each specialist produced *inside*
+# itself, against how many crossed back. The gap between those is the whole
+# architectural claim, expressed as a measurement rather than an assertion.
+#
+# These take primitives only, so this module never imports the agent layer.
+
+
+def record_usage(
+    account_id: str,
+    agent: str,
+    input_tokens: int,
+    output_tokens: int,
+    chars_inside: int,
+    chars_crossed: int,
+) -> None:
+    """Append one agent invocation to the ledger. Never fails a case."""
+    try:
+        with actions.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO usage (account_id, agent, input_tokens, output_tokens,
+                                   chars_inside, chars_crossed)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (account_id, agent, input_tokens, output_tokens, chars_inside, chars_crossed),
+            )
+    except Exception:
+        pass
+
+
+def usage_totals() -> dict:
+    """Everything the ledger knows, aggregated for the write-up."""
+    per_agent = [dict(r) for r in actions.query(
+        """
+        SELECT agent,
+               COUNT(*)                          AS invocations,
+               SUM(input_tokens)                 AS input_tokens,
+               SUM(output_tokens)                AS output_tokens,
+               SUM(input_tokens + output_tokens) AS total_tokens,
+               SUM(chars_inside)                 AS chars_inside,
+               SUM(chars_crossed)                AS chars_crossed
+        FROM usage GROUP BY agent ORDER BY total_tokens DESC
+        """
+    )]
+    overall = dict(actions.query(
+        """
+        SELECT COUNT(DISTINCT account_id) AS accounts,
+               COUNT(*)                   AS invocations,
+               COALESCE(SUM(input_tokens), 0)  AS input_tokens,
+               COALESCE(SUM(output_tokens), 0) AS output_tokens,
+               COALESCE(SUM(input_tokens + output_tokens), 0) AS total_tokens,
+               COALESCE(SUM(chars_inside), 0)  AS chars_inside,
+               COALESCE(SUM(chars_crossed), 0) AS chars_crossed
+        FROM usage
+        """
+    )[0])
+    inside = overall.get("chars_inside") or 0
+    crossed = overall.get("chars_crossed") or 0
+    overall["discarded_at_boundary_pct"] = (
+        round(100 * (1 - crossed / inside), 1) if inside else None
+    )
+    return {"per_agent": per_agent, "overall": overall}

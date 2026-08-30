@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from langchain.tools import tool
 
-from sentinel.repositories import network_repo
-from sentinel.tools._render import as_json, empty
+from sentinel import queries
+from sentinel.tools import as_json, empty
 
 
 @tool
@@ -33,7 +33,7 @@ def get_shared_devices(account_id: str) -> str:
     Args:
         account_id: The flagged account, e.g. 'A00985'.
     """
-    devices = network_repo.shared_devices(account_id)
+    devices = queries.shared_devices(account_id)
     if not devices:
         return empty(
             f"No device belonging to {account_id} is used by any other customer. "
@@ -55,7 +55,7 @@ def get_device_peers(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    peers = network_repo.device_peers(account_id)
+    peers = queries.device_peers(account_id)
     if not peers:
         return empty(
             f"{account_id} has no accounts linked to it by a shared device."
@@ -76,7 +76,7 @@ def get_merchant_overlap(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    overlap = network_repo.merchant_overlap(account_id)
+    overlap = queries.merchant_overlap(account_id)
     if not overlap:
         return empty(
             f"{account_id} used no high-risk merchants near the incident, so "

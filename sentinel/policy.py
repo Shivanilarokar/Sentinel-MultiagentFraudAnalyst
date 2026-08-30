@@ -1,39 +1,103 @@
-"""Machine-checkable disposition rules.
+"""The vocabulary of a disposition, and the rules that are checked rather than taught.
 
-`policies/*.md` is the human half: documents an analyst can edit, that teach
-judgement the model cannot infer. But a policy in a document is advisory. The
+`skills/*.md` is the human half: documents an analyst can edit, that teach
+judgement the model cannot infer. But a policy in a document is advisory - the
 model reads it, and mostly complies.
 
-Some rules have to hold every time. Those live here, in Python, and
-`record_disposition` refuses without them.
+Some rules have to hold every time. Those live here, and `record_disposition`
+refuses without them.
 
-    The policy documents teach. This file guarantees.
+    The skills teach. This file guarantees.
 
 Keep the two in sync: every rule below is also stated, marked as a HARD RULE,
-in the policy document that governs it, so an agent can comply in advance
-rather than discovering the refusal by trial and error.
+in the document that governs it, so an agent can comply in advance rather than
+discovering the refusal by trial and error.
+
+The types come first because they are the contract between the Disposition
+specialist and everything downstream. Being Pydantic models used as tool
+arguments, the schema is enforced by the tool-calling layer itself: a malformed
+verdict is rejected and retried by the model rather than landing in the
+database and being discovered later by a report generator.
 """
 
 from __future__ import annotations
 
 import re
+from typing import Literal
 
-from sentinel.models import ACTIONS, CONFIDENCES, IRREVERSIBLE, VERDICTS, EvidenceRef
+from pydantic import BaseModel, Field
+
+# ==========================================================================
+# Types
+# ==========================================================================
+
+Verdict = Literal["fraud", "legitimate", "insufficient_evidence"]
+Confidence = Literal["high", "medium", "low"]
+Action = Literal["none", "monitor", "block_card", "escalate_case"]
+EvidenceKind = Literal["case_note", "dispute", "prior_case", "transaction", "alert", "device"]
+
+# Actions that cannot be undone, and therefore cannot happen without a human.
+IRREVERSIBLE: set[str] = {"block_card", "escalate_case"}
+
+VERDICTS: tuple[str, ...] = ("fraud", "legitimate", "insufficient_evidence")
+CONFIDENCES: tuple[str, ...] = ("high", "medium", "low")
+ACTIONS: tuple[str, ...] = ("none", "monitor", "block_card", "escalate_case")
+
+
+class EvidenceRef(BaseModel):
+    """One citation, resolvable back to a database row.
+
+    `ref_id` must be a real identifier. `quote` must be text copied verbatim
+    from the record, not a paraphrase, because the evidence audit re-reads the
+    row and checks that the words are actually there.
+    """
+
+    kind: EvidenceKind = Field(description="Which table this citation comes from.")
+    ref_id: str = Field(
+        description="The exact identifier, e.g. 'N00080', 'T0107306', 'DP0012', 'AL0170'."
+    )
+    quote: str = Field(
+        default="",
+        description=(
+            "For a case note, dispute or prior case: a verbatim fragment of the "
+            "text, copied exactly. Leave empty for transactions and alerts."
+        ),
+    )
+    detail: str = Field(
+        default="",
+        description="What this record shows, in one clause. e.g. 'device 6h old at incident'.",
+    )
+
+
+class Disposition(BaseModel):
+    """A finished verdict on one account."""
+
+    account_id: str
+    verdict: Verdict
+    confidence: Confidence
+    reasoning: str
+    action: Action
+    evidence: list[EvidenceRef] = Field(default_factory=list)
+    information_required: list[str] = Field(default_factory=list)
+
+
+# ==========================================================================
+# The rules
+# ==========================================================================
 
 MIN_REASONING_CHARS = 120
 
 # Identifier shapes, taken from the database itself. A model that has not been
 # given a real id will happily invent a plausible-looking one - 'ALxxxx1',
 # 'T000000', or a rule id where an alert id belongs. Checking the shape catches
-# that at write time, while the model can still fix it, rather than leaving it
-# for the evidence audit to find after the sweep.
+# that at write time, while the model can still fix it.
 ID_PATTERNS: dict[str, re.Pattern] = {
-    "alert": re.compile(r"^AL\d{4}$"),  # AL0170
-    "transaction": re.compile(r"^T\d{7}$"),  # T0107306
-    "case_note": re.compile(r"^N\d{5}$"),  # N00080
-    "dispute": re.compile(r"^DP\d{4}$"),  # DP0012
-    "prior_case": re.compile(r"^PC\d{4}$"),  # PC0044
-    "device": re.compile(r"^D[X\d]\d{4,5}$"),  # D009851 or DX01444
+    "alert": re.compile(r"^AL\d{4}$"),          # AL0170
+    "transaction": re.compile(r"^T\d{7}$"),     # T0107306
+    "case_note": re.compile(r"^N\d{5}$"),       # N00080
+    "dispute": re.compile(r"^DP\d{4}$"),        # DP0012
+    "prior_case": re.compile(r"^PC\d{4}$"),     # PC0044
+    "device": re.compile(r"^D[X\d]\d{4,5}$"),   # D009851 or DX01444
 }
 
 ID_EXAMPLES: dict[str, str] = {

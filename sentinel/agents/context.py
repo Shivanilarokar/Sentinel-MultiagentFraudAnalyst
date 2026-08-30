@@ -17,7 +17,7 @@ from langchain.agents import create_agent
 from sentinel.agents._boundary import FINAL_MESSAGE_CONTRACT
 from sentinel.config import date_context
 from sentinel.policies import PolicyCatalogMiddleware, PolicyState
-from sentinel.tools.context_tools import CONTEXT_TOOLS
+from sentinel.tools import CONTEXT_TOOLS
 
 NAME = "context"
 

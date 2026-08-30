@@ -35,9 +35,9 @@ import json
 from langchain.tools import tool
 
 from sentinel import policy
-from sentinel.analysis import evidence_check
+from sentinel import analysis
 from sentinel.db import actions
-from sentinel.models import Disposition, EvidenceRef
+from sentinel.policy import Disposition, EvidenceRef
 
 # Set by the case runner. Sweep mode defers irreversible actions rather than
 # executing them, which is what keeps a 276-account run from ever taking an
@@ -99,7 +99,7 @@ def record_disposition(
 
     # Every citation must resolve to a real row that belongs to THIS account.
     # Shape alone is not enough: AL0001 is a valid alert id and the wrong one.
-    refusal = evidence_check.refusal_for(account_id, evidence)
+    refusal = analysis.refusal_for(account_id, evidence)
     if refusal:
         return refusal
 

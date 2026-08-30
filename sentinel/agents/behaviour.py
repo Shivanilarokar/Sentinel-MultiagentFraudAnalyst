@@ -13,7 +13,7 @@ from langchain.agents import create_agent
 from sentinel.agents._boundary import FINAL_MESSAGE_CONTRACT
 from sentinel.config import date_context
 from sentinel.policies import PolicyCatalogMiddleware, PolicyState
-from sentinel.tools.behaviour_tools import BEHAVIOUR_TOOLS
+from sentinel.tools import BEHAVIOUR_TOOLS
 
 NAME = "behaviour"
 

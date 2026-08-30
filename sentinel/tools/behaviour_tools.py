@@ -5,15 +5,15 @@ and it holds nothing that could answer any other. It cannot read a case note,
 cannot see another account, and cannot write anything.
 
 Every window is anchored on the incident, not on today. See
-`repositories/alerts_repo` for why that distinction decides the numbers.
+`queries` for why that distinction decides the numbers.
 """
 
 from __future__ import annotations
 
 from langchain.tools import tool
 
-from sentinel.repositories import alerts_repo, transactions_repo
-from sentinel.tools._render import as_json, empty
+from sentinel import queries
+from sentinel.tools import as_json, empty
 
 
 @tool
@@ -27,10 +27,10 @@ def get_alerts(account_id: str) -> str:
     Args:
         account_id: The flagged account, e.g. 'A00985'.
     """
-    alerts = alerts_repo.for_account(account_id)
+    alerts = queries.alerts_for(account_id)
     if not alerts:
         return empty(f"{account_id} has no alerts.")
-    window = alerts_repo.incident_window(account_id)
+    window = queries.incident_window(account_id)
     return as_json(
         {"incident_window": window, "alerts": alerts},
         note=(
@@ -52,8 +52,8 @@ def get_incident_activity(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    triggers = alerts_repo.trigger_transactions(account_id)
-    incident = transactions_repo.incident_transactions(account_id)
+    triggers = queries.trigger_transactions(account_id)
+    incident = queries.incident_transactions(account_id)
     if not incident and not triggers:
         return empty(f"No transactions found in the incident window for {account_id}.")
     return as_json({"trigger_transactions": triggers, "incident_transactions": incident})
@@ -74,9 +74,9 @@ def get_spending_baseline(account_id: str) -> str:
     """
     return as_json(
         {
-            "baseline_excluding_incident": transactions_repo.baseline(account_id),
-            "incident_window_24h": transactions_repo.velocity(account_id, 24),
-            "incident_window_1h": transactions_repo.velocity(account_id, 1),
+            "baseline_excluding_incident": queries.baseline(account_id),
+            "incident_window_24h": queries.velocity(account_id, 24),
+            "incident_window_1h": queries.velocity(account_id, 1),
         }
     )
 
@@ -93,7 +93,7 @@ def get_device_history(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    devices = transactions_repo.device_usage(account_id)
+    devices = queries.device_usage(account_id)
     if not devices:
         return empty(f"No device history for {account_id}.")
     return as_json({"devices": devices})
@@ -110,7 +110,7 @@ def get_geography(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    geo = transactions_repo.geo_pattern(account_id)
+    geo = queries.geo_pattern(account_id)
     if not geo:
         return empty(f"No transactions for {account_id}.")
     return as_json({"countries": geo})
@@ -128,7 +128,7 @@ def get_high_risk_merchant_activity(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    rows = transactions_repo.high_risk_merchant_activity(account_id)
+    rows = queries.high_risk_merchant_activity(account_id)
     if not rows:
         return empty(
             f"{account_id} made no crypto, gift card, money transfer or gaming "
@@ -149,7 +149,7 @@ def get_limit_utilisation(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    return as_json(transactions_repo.limit_utilisation(account_id))
+    return as_json(queries.limit_utilisation(account_id))
 
 
 BEHAVIOUR_TOOLS = [

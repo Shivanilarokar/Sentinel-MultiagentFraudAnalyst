@@ -15,8 +15,8 @@ from __future__ import annotations
 
 from langchain.tools import tool
 
-from sentinel.repositories import customer_repo, narrative_repo
-from sentinel.tools._render import as_json, empty
+from sentinel import queries
+from sentinel.tools import as_json, empty
 
 TIMING_NOTE = (
     "TIMING IS EVIDENCE. Each record carries `timing` and `days_before_alert`. "
@@ -39,7 +39,7 @@ def get_customer_profile(account_id: str) -> str:
     Args:
         account_id: The flagged account, e.g. 'A00985'.
     """
-    profile = customer_repo.profile(account_id)
+    profile = queries.profile(account_id)
     if not profile:
         return empty(f"No customer found for {account_id}.")
     return as_json(profile)
@@ -64,7 +64,7 @@ def get_case_notes(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    notes = narrative_repo.case_notes(account_id)
+    notes = queries.case_notes(account_id)
     if not notes:
         return empty(
             f"There are no case notes for the customer behind {account_id}. "
@@ -92,7 +92,7 @@ def get_disputes(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    disputes = narrative_repo.disputes(account_id)
+    disputes = queries.disputes(account_id)
     if not disputes:
         return empty(
             f"{account_id} has no disputes on file. The customer has not "
@@ -116,7 +116,7 @@ def get_prior_cases(account_id: str) -> str:
     Args:
         account_id: The flagged account.
     """
-    cases = narrative_repo.prior_cases(account_id)
+    cases = queries.prior_cases(account_id)
     if not cases:
         return empty(
             f"{account_id} has no prior investigations. There is no history to "

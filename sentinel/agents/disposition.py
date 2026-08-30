@@ -18,7 +18,7 @@ from langchain.agents.middleware import HumanInTheLoopMiddleware
 
 from sentinel.config import date_context
 from sentinel.policies import PolicyCatalogMiddleware, PolicyGateMiddleware, PolicyState
-from sentinel.tools.disposition_tools import DISPOSITION_TOOLS
+from sentinel.tools import DISPOSITION_TOOLS
 
 NAME = "disposition"
 
@@ -141,20 +141,17 @@ def build(model, *, human_in_the_loop: bool = True) -> object:
     gate refuses the write until the governing document has been read, and the
     approval gate sits outermost so it is the last thing standing between a
     decision and an irreversible action.
+
+    The checkpointer that makes the pause resumable lives on the supervisor,
+    not here - see `supervisor.py`.
     """
     middleware = [
         PolicyCatalogMiddleware(),
-        PolicyGateMiddleware(
-            {
-                # A verdict cannot be written until the evidence standard
-                # has been read, and an irreversible action cannot be taken
-                # until the escalation matrix has. Both were being skipped
-                # when they were only asked for in the prompt.
-                "record_disposition": "evidence_standards",
-                "block_card": "escalation_matrix",
-                "escalate_case": "escalation_matrix",
-            }
-        ),
+        PolicyGateMiddleware({
+            "record_disposition": "evidence_standards",
+            "block_card": "escalation_matrix",
+            "escalate_case": "escalation_matrix",
+        }),
     ]
     if human_in_the_loop:
         middleware.append(

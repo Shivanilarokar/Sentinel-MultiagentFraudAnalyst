@@ -8,10 +8,9 @@
 The one architectural move that creates this shape is `@tool` wrapping an
 agent's `.invoke()`. Everything else is prompt and plumbing.
 
-This module imports no repository and no database handle. Its four tools are
+This module imports no query module and no database handle. Its four tools are
 the four specialist wrappers, and there is nothing else it could call. That is
-"the supervisor has no database access", expressed as an import boundary rather
-than as a promise.
+"the supervisor has no database access", expressed as an import boundary.
 
 One placement here is load-bearing and easy to get backwards:
 
@@ -26,20 +25,19 @@ not want. Give the supervisor none and the interrupt has nowhere to live.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, NotRequired
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import AgentState
 from langchain.chat_models import init_chat_model
 from langchain.messages import ToolMessage
 from langchain.tools import InjectedToolCallId, ToolRuntime, tool
+from langchain_core.rate_limiters import InMemoryRateLimiter
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
-from langchain_core.rate_limiters import InMemoryRateLimiter
-
 from sentinel.agents import behaviour, context, disposition, network
 from sentinel.agents._boundary import consult
-from sentinel.agents.state import SupervisorState
 from sentinel.config import (
     MODEL_MAX_RETRIES,
     REQUESTS_PER_SECOND,
@@ -49,7 +47,54 @@ from sentinel.config import (
     require_openai_key,
 )
 
-PROMPT = f"""
+SPECIALISTS = ("behaviour", "context", "network", "disposition")
+
+
+def _dedupe(a: list | None, b: list | None) -> list:
+    """Union preserving first-seen order. Consulting twice records once."""
+    return list(dict.fromkeys((a or []) + (b or [])))
+
+
+def _extend(a: list | None, b: list | None) -> list:
+    return (a or []) + (b or [])
+
+
+def _keep_latest(a: str | None, b: str | None) -> str | None:
+    """Last writer wins, ignoring blanks.
+
+    Every specialist wrapper stamps `account_id` onto state. When the
+    supervisor issues two consult calls in the same turn - which it is
+    entitled to do, and does - both Commands write this key in one step.
+    Without a reducer LangGraph raises InvalidUpdateError, the step is
+    rejected, and the assistant message is left holding tool_calls with no
+    matching tool messages; the next model call then fails with a 400. Six
+    accounts were lost to that chain in the first full sweep.
+
+    The value is the same string in every writer, so any merge rule is
+    correct. What matters is that one exists.
+    """
+    return b or a
+
+
+class SupervisorState(AgentState):
+    """State carried by the supervisor across one case.
+
+    `findings` holds each specialist's report as structured data. It is a state
+    key, not a message, so the supervisor's model never reads it - only the
+    rendered final message reaches the conversation. It exists so the report
+    writer and the evidence audit can work from identifiers rather than
+    re-parsing prose.
+
+    `specialists_consulted` is what turns ordering from a request into a rule:
+    the disposition wrapper refuses while 'context' is absent.
+    """
+
+    account_id: NotRequired[Annotated[str, _keep_latest]]
+    findings: NotRequired[Annotated[list[dict], _extend]]
+    specialists_consulted: NotRequired[Annotated[list[str], _dedupe]]
+
+
+SUPERVISOR_PROMPT = f"""
 You are the Supervisor on Sentinel Bank's fraud operations desk.
 
 276 accounts were flagged over the weekend and roughly two thirds of them did
@@ -102,6 +147,8 @@ and do not describe it as done.
 {date_context()}
 """.strip()
 
+PROMPT = SUPERVISOR_PROMPT  # the name the tests and docs use
+
 
 def build_sentinel(
     *,
@@ -136,7 +183,9 @@ def build_sentinel(
     behaviour_agent = behaviour.build(specialist_llm)
     context_agent = context.build(specialist_llm)
     network_agent = network.build(specialist_llm)
-    disposition_agent = disposition.build(supervisor_llm, human_in_the_loop=human_in_the_loop)
+    disposition_agent = disposition.build(
+        supervisor_llm, human_in_the_loop=human_in_the_loop
+    )
 
     # ---- Layer 3: wrap each specialist as exactly one tool ------------
     @tool
@@ -252,7 +301,7 @@ def build_sentinel(
     supervisor = create_agent(
         supervisor_llm,
         tools=subagent_tools,
-        system_prompt=PROMPT,
+        system_prompt=SUPERVISOR_PROMPT,
         state_schema=SupervisorState,
         checkpointer=checkpointer or InMemorySaver(),
     )

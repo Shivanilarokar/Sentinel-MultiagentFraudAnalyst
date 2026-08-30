@@ -1,0 +1,29 @@
+==============================================================================
+HUMAN-IN-THE-LOOP DEMONSTRATION - A00782 - path: APPROVE
+==============================================================================
+
+status after first invoke : awaiting_approval
+
+--- THE RUN IS FROZEN. Nothing has been written. ---
+rows in the actions table while paused: 0   (expected 0)
+
+interrupt id: 8636b94e9ba630ddfd9aade91b2bf821
+  tool : escalate_case
+  args : {
+         "account_id": "A00782",
+         "reason": "Customer disowned the transactions and device registration in note N00005 and dispute DP0006, matching multiple high-risk behavioural alerts on 2026-02-28, indicating fraud. Escalating for investigation.",
+         "escalate_to": "investigations"
+}
+
+--- RESUMING WITH Command(resume=...) : approve ---
+   (another gate revealed - resuming again)
+status after resume: completed
+
+--- WHAT WAS ACTUALLY WRITTEN ---
+actions rows: 1
+   block_card       state=executed       by=analyst  CD00001: Fraud confirmed by customer disowning of transactions and dev
+
+verdict : fraud / high / action=monitor
+
+supervisor's closing message:
+  Account A00782 shows multiple behavioral alerts on 2026-02-28 with rapid, high-value transactions at night using a new device and spanning 4 countries in 36 minutes, far exceeding baseline norms and involving high-risk merchants. Context analysis reveals the customer explicitly disowns and disputes these transactions and the device registration, stating "They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." (Note N00005) and "I received no OTP for any of these. Somebody else has access to my account." (Note DP0006). Network analysis shows the account is isolated, with no shared devices and only one high-risk merchant

@@ -1,0 +1,28 @@
+==============================================================================
+HUMAN-IN-THE-LOOP DEMONSTRATION - A00782 - path: REJECT
+==============================================================================
+
+status after first invoke : awaiting_approval
+
+--- THE RUN IS FROZEN. Nothing has been written. ---
+rows in the actions table while paused: 0   (expected 0)
+
+interrupt id: 265575138602f21905f5f2ce30e21ae6
+  tool : block_card
+  args : {
+         "account_id": "A00782",
+         "card_id": "CD000782",
+         "reason": "Customer disowns transactions and device registration (case note N00005, dispute DP0006); multiple fraud alerts and anomalous high-value transactions."
+}
+
+--- RESUMING WITH Command(resume=...) : reject ---
+   (another gate revealed - resuming again)
+status after resume: completed
+
+--- WHAT WAS ACTUALLY WRITTEN ---
+actions rows: 0
+
+verdict : fraud / high / action=monitor
+
+supervisor's closing message:
+  Account A00782 experienced multiple fraud alerts on 28 Feb 2026 triggered by 5 transactions totaling $317,909.38 across four countries within 36 minutes, involving a newly registered device at incident start and high-risk merchants. Case note N00005 (post-incident) documents an inbound call where the customer stated: "They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." Dispute DP0006 filed later states: "I received no OTP for any of these. Somebody else has access to my account." The customer clearly disowns both the device registration and the transactions, which decisively supports a fraud verdict with high confi

@@ -36,8 +36,7 @@ from langchain_core.rate_limiters import InMemoryRateLimiter
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
-from sentinel.agents import behaviour, context, disposition, network
-from sentinel.agents._boundary import consult
+from sentinel.agents import behaviour, consult, context, disposition, network
 from sentinel.config import (
     MODEL_MAX_RETRIES,
     REQUESTS_PER_SECOND,

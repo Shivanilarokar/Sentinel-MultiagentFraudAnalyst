@@ -81,7 +81,7 @@ Editing a `.md` changes behaviour with no code change and no restart.
   `case_note`, `dispute` or `prior_case`, and refuses any narrative citation without a
   quote.
 - Quotes are checked against the stored text — a fabricated quote is refused at write
-  time and flagged in `reports/evidence_audit.md`.
+  time and flagged in `EVIDENCE_AUDIT.md`.
 - `sentinel/policies/narrative_reading.md` supplies the three tests: timing, subject,
   specificity.
 
@@ -121,7 +121,7 @@ Proof: `test_insufficient_evidence_must_name_what_would_resolve_it`,
 Every claim carries an `EvidenceRef` with a real identifier.
 `sentinel/analysis.py` resolves each one back to a row through the
 correct join — notes and prior cases via `customer_id`, disputes via `txn_id`.
-Output: `reports/evidence_audit.md`.
+Output: `EVIDENCE_AUDIT.md`.
 
 ### Nothing invented — 5 pts
 Three layers:

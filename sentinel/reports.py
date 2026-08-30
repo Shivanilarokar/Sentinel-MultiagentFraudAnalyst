@@ -3,7 +3,7 @@
     DISPOSITIONS.md            every alerted account, with reasoning
     CASES.md                   three worked cases with full specialist trails
     WRITEUP.md                 measured cost, comparison, the most exposed call
-    reports/evidence_audit.md  every citation resolved back to a database row
+    EVIDENCE_AUDIT.md          every citation resolved back to a database row
 
 Generating them means no number in a deliverable can drift from what the system
 actually decided, which is exactly the property the marking looks for.
@@ -15,13 +15,7 @@ import json
 from pathlib import Path
 
 from sentinel import analysis, queries
-from sentinel.config import (
-    PROJECT_ROOT,
-    REPORTS_DIR,
-    SPECIALIST_MODEL,
-    SUPERVISOR_MODEL,
-    ensure_dirs,
-)
+from sentinel.config import PROJECT_ROOT, SPECIALIST_MODEL, SUPERVISOR_MODEL
 from sentinel.db import actions, usage_totals
 
 
@@ -231,7 +225,7 @@ def write_cases(path: Path | None = None) -> Path:
 
 
 # ==========================================================================
-# reports/evidence_audit.md
+# EVIDENCE_AUDIT.md
 # ==========================================================================
 
 def write_evidence_audit(path: Path | None = None) -> Path:
@@ -240,8 +234,7 @@ def write_evidence_audit(path: Path | None = None) -> Path:
     A separate pass from the write-time check in `record_disposition`. That one
     stops bad citations landing; this proves, over every account, that none did.
     """
-    ensure_dirs()
-    path = path or REPORTS_DIR / "evidence_audit.md"
+    path = path or PROJECT_ROOT / "EVIDENCE_AUDIT.md"
     audit = analysis.audit_all()
 
     lines = [

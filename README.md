@@ -249,7 +249,7 @@ belongs to A00832 — and for anything a human wrote, the quoted words are check
 against the stored text.
 
 **3 · Audit.** `sentinel analyse evidence` re-runs all of it over every recorded
-disposition and writes `reports/evidence_audit.md`.
+disposition and writes `EVIDENCE_AUDIT.md`.
 
 The reference this project follows puts it well: *a subagent's final message is a
 claim; your code should be able to tell a claim from a fact.*
@@ -351,7 +351,7 @@ models are poor at date arithmetic and this distinction decides a third of the q
 | `DISPOSITIONS.md` | Verdict, confidence, reasoning and cited evidence for all 276 |
 | `CASES.md` | Three worked cases with every specialist's finding in full |
 | `WRITEUP.md` | Measured tokens, the single-agent comparison, and the most exposed call |
-| `reports/evidence_audit.md` | Every citation resolved back to a database row |
+| `EVIDENCE_AUDIT.md` | Every citation resolved back to a database row |
 | `docs/SPEC.md` | The design specification |
 | `docs/transcripts/` | Approve and reject transcripts of the approval gate |
 

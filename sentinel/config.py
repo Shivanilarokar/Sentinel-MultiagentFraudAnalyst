@@ -33,7 +33,6 @@ RUNTIME_DIR = PROJECT_ROOT / "runtime"        # everything we write lives here
 ACTIONS_DB = RUNTIME_DIR / "actions.db"       # dispositions, actions, jobs, usage
 CHECKPOINT_DB = RUNTIME_DIR / "checkpoints.db"  # LangGraph HITL state
 
-REPORTS_DIR = PROJECT_ROOT / "reports"
 POLICY_DIR = Path(__file__).resolve().parent / "policies"
 
 # --------------------------------------------------------------------------
@@ -142,6 +141,5 @@ def require_openai_key() -> None:
 
 
 def ensure_dirs() -> None:
-    """Create the writable directories. Never touches DATA_DIR."""
+    """Create the writable directory. Never touches DATA_DIR."""
     RUNTIME_DIR.mkdir(exist_ok=True)
-    REPORTS_DIR.mkdir(exist_ok=True)

@@ -175,9 +175,9 @@ def test_disposition_is_blocked_until_context_has_been_consulted():
 
 
 def test_the_wrapper_returns_only_the_last_message():
-    from sentinel.agents import _boundary
+    from sentinel import agents
 
-    source = inspect.getsource(_boundary.consult)
+    source = inspect.getsource(agents.consult)
     assert "final_text(result)" in source
     assert "ToolMessage(content=finding" in source
 

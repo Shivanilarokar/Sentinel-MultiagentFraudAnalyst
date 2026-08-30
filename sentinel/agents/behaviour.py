@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from langchain.agents import create_agent
 
-from sentinel.agents._boundary import FINAL_MESSAGE_CONTRACT
+from sentinel.agents import FINAL_MESSAGE_CONTRACT
 from sentinel.config import date_context
 from sentinel.policies import PolicyCatalogMiddleware, PolicyState
 from sentinel.tools import BEHAVIOUR_TOOLS

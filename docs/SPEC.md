@@ -202,4 +202,4 @@ Generated from recorded results, not written by hand:
 - `CASES.md` — three worked cases with each specialist's trail
 - `WRITEUP.md` — measured sweep tokens, a derived single-agent estimate, and
   the system's most defensible error
-- `reports/evidence_audit.md` — every citation resolved back to a database row
+- `EVIDENCE_AUDIT.md` — every citation resolved back to a database row

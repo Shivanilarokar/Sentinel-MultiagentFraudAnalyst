@@ -1,29 +1,17 @@
 ==============================================================================
-HUMAN-IN-THE-LOOP DEMONSTRATION - A00782 - path: APPROVE
+  HUMAN APPROVAL GATE - APPROVED PATH
+  account A00594   generated 2026-08-31 17:37:13
 ==============================================================================
 
-status after first invoke : awaiting_approval
+[1] The supervisor works the case.
 
---- THE RUN IS FROZEN. Nothing has been written. ---
-rows in the actions table while paused: 0   (expected 0)
+    specialists consulted : behaviour, context, network, disposition
+    run status            : done
 
-interrupt id: 8636b94e9ba630ddfd9aade91b2bf821
-  tool : escalate_case
-  args : {
-         "account_id": "A00782",
-         "reason": "Customer disowned the transactions and device registration in note N00005 and dispute DP0006, matching multiple high-risk behavioural alerts on 2026-02-28, indicating fraud. Escalating for investigation.",
-         "escalate_to": "investigations"
-}
+    The disposition officer did not reach for an irreversible action on
+    this run, so there was nothing to approve. That is a legitimate
+    outcome - the escalation matrix reserves block_card and
+    escalate_case for cases that need them - but it means this run
+    does not demonstrate the gate.
 
---- RESUMING WITH Command(resume=...) : approve ---
-   (another gate revealed - resuming again)
-status after resume: completed
-
---- WHAT WAS ACTUALLY WRITTEN ---
-actions rows: 1
-   block_card       state=executed       by=analyst  CD00001: Fraud confirmed by customer disowning of transactions and dev
-
-verdict : fraud / high / action=monitor
-
-supervisor's closing message:
-  Account A00782 shows multiple behavioral alerts on 2026-02-28 with rapid, high-value transactions at night using a new device and spanning 4 countries in 36 minutes, far exceeding baseline norms and involving high-risk merchants. Context analysis reveals the customer explicitly disowns and disputes these transactions and the device registration, stating "They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." (Note N00005) and "I received no OTP for any of these. Somebody else has access to my account." (Note DP0006). Network analysis shows the account is isolated, with no shared devices and only one high-risk merchant
+    verdict recorded : {'verdict': 'fraud', 'confidence': 'high', 'reasoning': "Alerts R05 fired on 2026-02-27 and 2026-02-28 for high risk merchant bursts at money transfer merchants, detecting multiple large transactions totaling 542,791 Indian Rupees within 2 days, far exceeding the 90-day baseline of 29,314 and max 7,200. The customer was evasive, stating in note N00047 'a friend asked them to receive money and forward it on' (filed after incident), not explaining the outgoing flagged transactions. Dispute DP0033 explicitly denies authorization of flagged transaction T0107963: 'I did not authorise this transaction. I have never shopped at this merchant and my card was in my wallet the whole time.' The account shares device DR001 with multiple customers including one with prior confirmed fraud, indicating organized mule ring activity, supported by network specialist's findings. The convincing denial in dispute DP0033 settled the case as fraud with high confidence."}

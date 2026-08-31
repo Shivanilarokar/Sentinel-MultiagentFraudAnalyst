@@ -308,8 +308,15 @@ def build_system(
             layer without rebuilding the rest.
     """
     require_openai_key()
-    fast = init_chat_model(specialist_model or SPECIALIST_MODEL, model_provider="openai")
-    strong = init_chat_model(supervisor_model or SUPERVISOR_MODEL, model_provider="openai")
+
+    # The sweep runs accounts concurrently and the account's token-per-minute
+    # limit is a hard ceiling, so a 429 is an expected part of normal operation
+    # rather than a failure. Without retries the first burst kills most of the
+    # queue; with them the workers simply back off and continue.
+    fast = init_chat_model(specialist_model or SPECIALIST_MODEL,
+                           model_provider="openai", max_retries=8)
+    strong = init_chat_model(supervisor_model or SUPERVISOR_MODEL,
+                             model_provider="openai", max_retries=8)
 
     # ---- Layer 2: the four specialists -------------------------------------
     # Each gets PolicyMiddleware so it can see the catalog and load what it

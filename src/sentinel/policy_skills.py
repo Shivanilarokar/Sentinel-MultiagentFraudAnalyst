@@ -128,6 +128,12 @@ class PolicyState(AgentState):
     policies_loaded: NotRequired[Annotated[list[str], _merge_loaded]]
     account_id: NotRequired[str]
 
+    # True during a queue sweep, where there is nobody to ask for approval. The
+    # irreversible tools read this and QUEUE their action instead of executing
+    # it. An unattended run that could block 276 cards is a worse system than
+    # one that cannot.
+    unattended: NotRequired[bool]
+
 
 # ---------------------------------------------------------------------------
 # Level 2: the load tool
@@ -171,20 +177,6 @@ def load_policy(policy_name: str, runtime: ToolRuntime) -> Command:
         tool_call_id=runtime.tool_call_id,
         status="error",
     )]})
-
-
-def requires_policy(policy_name: str, runtime: ToolRuntime) -> str | None:
-    """Guard helper for enforcing the rule inside a single tool by hand.
-
-        if err := requires_policy("evidence_standards", runtime):
-            return err
-    """
-    if policy_name in (runtime.state.get("policies_loaded") or []):
-        return None
-    return (
-        f"Blocked: call load_policy('{policy_name}') before using this tool, so "
-        f"that you follow the current desk policy rather than guessing at it."
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -236,8 +228,8 @@ class PolicyMiddleware(AgentMiddleware[PolicyState]):
 class PolicyGateMiddleware(AgentMiddleware[PolicyState]):
     """Refuses to run a tool until its governing policy has actually been read.
 
-    `requires_policy` writes the check by hand inside one tool. This applies the
-    same rule across a map of tools without touching their source, which matters
+    It applies the rule across a map of tools without touching their source,
+    which matters
     because the disposition tools are shared with tests and reports that have no
     policy to obey.
 
@@ -339,7 +331,7 @@ def main() -> None:
 __all__ = [
     "Policy", "PolicyState", "PolicyMiddleware", "PolicyGateMiddleware",
     "POLICY_GATES", "discover_policies", "policy_catalog", "disclosure_stats",
-    "load_policy", "requires_policy",
+    "load_policy",
 ]
 
 

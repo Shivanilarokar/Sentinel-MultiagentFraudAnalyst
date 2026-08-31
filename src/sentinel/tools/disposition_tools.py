@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from langchain.tools import tool
+from langchain.tools import ToolRuntime, tool
 
 from sentinel import db, policy
 
@@ -135,8 +135,59 @@ def record_disposition(
     )
 
 
+def _verdict_for(account_id: str) -> str | None:
+    """The verdict already recorded for this account, if any."""
+    rows = db.fetch("SELECT verdict FROM dispositions WHERE account_id = ?", (account_id,))
+    return rows[0]["verdict"] if rows else None
+
+
+def _file_action(account_id: str, action: str, target: str, reason: str,
+                 runtime: ToolRuntime) -> str:
+    """Record an irreversible action, executing it only if a human is present.
+
+    During a sweep nobody is watching, so the action is written with status
+    `proposed` and waits in `sentinel approvals` for a person. An unattended run
+    that could block cards is a worse system than one that cannot.
+
+    When a human IS present, `HumanInTheLoopMiddleware` has already interrupted
+    and been approved before this function is reached at all — so by the time we
+    are here, the sign-off has happened.
+    """
+    verdict = _verdict_for(account_id)
+    if verdict is None:
+        return (
+            "REFUSED: no verdict has been recorded for this account yet. "
+            "Call record_disposition first — an action must follow a verdict."
+        )
+    if contradiction := policy.check_action(action, verdict):
+        return contradiction
+
+    unattended = bool(runtime.state.get("unattended"))
+    status = "proposed" if unattended else "approved"
+
+    action_id = db.write(
+        "INSERT INTO actions (account_id, action, target, reason, status, "
+        "approved_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (account_id, action, target, reason, status,
+         None if unattended else "analyst", _now()),
+    )
+
+    if unattended:
+        return (
+            f"QUEUED (action #{action_id}): {action} on {account_id} targeting "
+            f"{target} has been PROPOSED, not executed. No analyst is present "
+            f"during a sweep, and this action cannot be undone. It is waiting "
+            f"for sign-off. Reason recorded: {reason}"
+        )
+    return (
+        f"EXECUTED (action #{action_id}): {action} on {account_id} targeting "
+        f"{target}, approved by analyst. Reason: {reason}"
+    )
+
+
 @tool
-def block_card(account_id: str, card_id: str, reason: str) -> str:
+def block_card(account_id: str, card_id: str, reason: str,
+               runtime: ToolRuntime) -> str:
     """Block a card. IRREVERSIBLE — a human must approve this before it runs.
 
     Reserve this for cases where money is still moving. A confirmed one-off that
@@ -150,29 +201,12 @@ def block_card(account_id: str, card_id: str, reason: str) -> str:
             profile you were given — do not guess it.
         reason: Why this card, now. One sentence an analyst could defend.
     """
-    row = db.fetch("SELECT verdict FROM dispositions WHERE account_id = ?", (account_id,))
-    if not row:
-        return (
-            "REFUSED: no verdict has been recorded for this account yet. "
-            "Call record_disposition first — an action must follow a verdict."
-        )
-
-    verdict = row[0]["verdict"]
-    if contradiction := policy.check_action("block_card", verdict):
-        return contradiction
-
-    action_id = db.write(
-        """
-        INSERT INTO actions (account_id, action, target, reason, status, created_at)
-        VALUES (?, 'block_card', ?, ?, 'approved', ?)
-        """,
-        (account_id, card_id, reason, _now()),
-    )
-    return f"BLOCKED: card {card_id} on {account_id} (action #{action_id}). Reason: {reason}"
+    return _file_action(account_id, "block_card", card_id, reason, runtime)
 
 
 @tool
-def escalate_case(account_id: str, to_team: str, reason: str) -> str:
+def escalate_case(account_id: str, to_team: str, reason: str,
+                  runtime: ToolRuntime) -> str:
     """Escalate to a human investigation team. IRREVERSIBLE — needs approval.
 
     Use when the case needs a person: a suspected ring, a large loss, or a file
@@ -184,24 +218,7 @@ def escalate_case(account_id: str, to_team: str, reason: str) -> str:
         to_team: Which team, e.g. 'fraud_investigations' or 'aml_review'.
         reason: What you want them to do, and what you could not settle yourself.
     """
-    row = db.fetch("SELECT verdict FROM dispositions WHERE account_id = ?", (account_id,))
-    if not row:
-        return (
-            "REFUSED: no verdict has been recorded for this account yet. "
-            "Call record_disposition first — an action must follow a verdict."
-        )
-
-    if contradiction := policy.check_action("escalate_case", row[0]["verdict"]):
-        return contradiction
-
-    action_id = db.write(
-        """
-        INSERT INTO actions (account_id, action, target, reason, status, created_at)
-        VALUES (?, 'escalate_case', ?, ?, 'approved', ?)
-        """,
-        (account_id, to_team, reason, _now()),
-    )
-    return f"ESCALATED: {account_id} to {to_team} (action #{action_id}). Reason: {reason}"
+    return _file_action(account_id, "escalate_case", to_team, reason, runtime)
 
 
 # The registry. Writes only — there is deliberately no read tool in this list,

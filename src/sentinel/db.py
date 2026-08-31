@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import sqlite3
 from contextlib import contextmanager
 from collections.abc import Generator
@@ -167,11 +166,6 @@ def reset_runtime() -> None:
                       "token_ledger", "policy_loads", "findings"):
             conn.execute(f"DROP TABLE IF EXISTS {table}")
     init_runtime()
-
-
-def rows_to_json(rows: list[sqlite3.Row]) -> str:
-    """Small helper for tools that hand a model structured text."""
-    return json.dumps([dict(r) for r in rows], default=str, indent=2)
 
 
 if __name__ == "__main__":

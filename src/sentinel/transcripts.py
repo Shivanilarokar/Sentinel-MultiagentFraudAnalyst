@@ -24,7 +24,7 @@ What the transcripts have to show:
 That last one matters most. A rejection that the model works around is not an
 approval gate, it is a speed bump.
 
-    python -m sentinel.hitl A00594
+    python -m sentinel.transcripts A00594
 """
 
 from __future__ import annotations

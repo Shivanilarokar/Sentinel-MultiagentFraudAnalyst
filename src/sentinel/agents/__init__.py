@@ -1,0 +1,102 @@
+"""Assembling the three layers.
+
+    Layer 3   supervisor        routes at the domain level. No database access.
+    Layer 2   four specialists  natural language in, natural language out
+    Layer 1   SQLite tools      exact arguments, real rows
+
+One module per agent, because each one is a prompt plus a toolset and those are
+the two things anybody ever wants to change. Editing the context specialist's
+three narrative tests should not mean scrolling past the behaviour analyst.
+
+    python -m sentinel.agents
+"""
+
+from __future__ import annotations
+
+from langchain.chat_models import init_chat_model
+
+from sentinel.agents import behaviour, context, disposition, network, supervisor
+from sentinel.config import SPECIALIST_MODEL, SUPERVISOR_MODEL, require_openai_key
+
+
+def build_system(
+    *,
+    human_in_the_loop: bool = True,
+    checkpointer: object | None = None,
+    specialist_model: str | None = None,
+    supervisor_model: str | None = None,
+):
+    """Assemble the whole system and return `(supervisor, parts)`.
+
+    Two model tiers. The specialists run four times per account across 276
+    accounts, so they carry the cheaper one; the supervisor and the disposition
+    officer weigh conflicting evidence and write the text that ends up in the
+    record.
+
+    Args:
+        human_in_the_loop: When True, `block_card` and `escalate_case` pause for
+            a person. Set False for the queue sweep, where there is nobody to
+            ask — irreversible actions are then proposed and queued rather than
+            executed.
+        checkpointer: Where a paused run lives while it waits. Goes on the
+            supervisor, because that is the run being frozen and thawed; the
+            approval middleware goes on the disposition subagent, because that
+            is where the irreversible tools are. Getting those two the wrong way
+            round gives you nested persistence and an interrupt with nowhere to
+            live.
+
+    Returns:
+        supervisor: the agent to invoke.
+        parts: the individual pieces, so a notebook can inspect or swap one
+            layer without rebuilding the rest.
+    """
+    require_openai_key()
+
+    # A 429 is an expected part of running a queue concurrently against a
+    # per-minute token ceiling, not a failure. Without retries the first burst
+    # kills most of the queue.
+    fast = init_chat_model(specialist_model or SPECIALIST_MODEL,
+                           model_provider="openai", max_retries=8)
+    strong = init_chat_model(supervisor_model or SUPERVISOR_MODEL,
+                             model_provider="openai", max_retries=8)
+
+    specialists = {
+        "behaviour": behaviour.build(fast),
+        "context": context.build(fast),
+        "network": network.build(fast),
+        "disposition": disposition.build(strong, human_in_the_loop=human_in_the_loop),
+    }
+
+    agent, tools = supervisor.build(strong, specialists, checkpointer=checkpointer)
+
+    parts = {
+        **{f"{name}_agent": a for name, a in specialists.items()},
+        "supervisor_tools": tools,
+        "human_in_the_loop": human_in_the_loop,
+    }
+    return agent, parts
+
+
+def main() -> None:
+    """Print the assembled shape without calling a model."""
+    from sentinel.tools import READ_TOOLS, TOOLSETS
+
+    print("\nTHE THREE LAYERS")
+    print("=" * 66)
+    print("\nLayer 3  supervisor")
+    for name in ("consult_behaviour_analyst", "consult_context_specialist",
+                 "consult_network_analyst", "consult_disposition_officer"):
+        print(f"           {name}")
+    print(f"\n         database tools held: 0")
+
+    print("\nLayer 2  specialists")
+    for domain, tools in TOOLSETS.items():
+        print(f"           {domain:<12} {len(tools)} tools")
+
+    print(f"\nLayer 1  {sum(len(t) for t in TOOLSETS.values())} tools, "
+          f"{len(READ_TOOLS)} of them read-only")
+    print()
+
+
+if __name__ == "__main__":
+    main()

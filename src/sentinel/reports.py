@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from sentinel import analysis, db, policy, queries
+from sentinel import analysis, db, queries, validation
 from sentinel.config import PROJECT_ROOT
 
 VERDICT_ORDER = {"fraud": 0, "insufficient_evidence": 1, "legitimate": 2}
@@ -118,7 +118,7 @@ def _pick_cases() -> dict[str, dict | None]:
         if r["confidence"] != "high":
             continue
         if v == "legitimate" and not any(
-                e["kind"] in policy.NARRATIVE_KINDS for e in _evidence(r)):
+                e["kind"] in validation.NARRATIVE_KINDS for e in _evidence(r)):
             continue
         picks[v] = r
 
@@ -205,9 +205,9 @@ def write_evidence_audit() -> str:
     for r in rows:
         for e in _evidence(r):
             checked += 1
-            issue = (policy.check_shape(e["kind"], e["id"])
-                     or policy.check_ownership(e["kind"], e["id"], r["account_id"])
-                     or policy.check_quote(e["kind"], e["id"], e.get("quote", "")))
+            issue = (validation.check_shape(e["kind"], e["id"])
+                     or validation.check_ownership(e["kind"], e["id"], r["account_id"])
+                     or validation.check_quote(e["kind"], e["id"], e.get("quote", "")))
             if issue:
                 failed += 1
                 problems.append((r["account_id"], e["kind"], e["id"], issue))

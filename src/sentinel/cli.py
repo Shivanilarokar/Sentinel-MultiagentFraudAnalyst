@@ -23,7 +23,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from sentinel import analysis, db, doctor, policy_skills, reports, sweep
+from sentinel import agents, analysis, db, doctor, middleware, reports, sweep
 
 app = typer.Typer(add_completion=False, help="Multi-agent fraud triage for the Sentinel Bank queue.")
 console = Console()
@@ -170,7 +170,7 @@ def approvals() -> None:
 @app.command()
 def policies() -> None:
     """The progressive-disclosure report, including the hot-reload demonstration."""
-    policy_skills.main()
+    middleware.main()
 
 
 @app.command()

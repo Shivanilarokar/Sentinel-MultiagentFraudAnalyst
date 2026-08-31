@@ -25,14 +25,14 @@ from datetime import datetime
 
 from langchain.tools import ToolRuntime, tool
 
-from sentinel import db, policy
+from sentinel import db, validation
 
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
 
-def _parse_evidence(evidence: str) -> tuple[list[policy.EvidenceRef], str | None]:
+def _parse_evidence(evidence: str) -> tuple[list[validation.EvidenceRef], str | None]:
     """Turn the model's JSON evidence list into refs, or explain what is wrong.
 
     Expected shape, which the tool docstring states explicitly:
@@ -56,7 +56,7 @@ def _parse_evidence(evidence: str) -> tuple[list[policy.EvidenceRef], str | None
                 'each citation needs "kind" and "id", for example '
                 '{"kind": "alert", "id": "AL0170"}.'
             )
-        refs.append(policy.EvidenceRef(
+        refs.append(validation.EvidenceRef(
             kind=str(item["kind"]),
             ref_id=str(item["id"]),
             quote=str(item.get("quote", "")),
@@ -104,7 +104,7 @@ def record_disposition(
     if parse_error:
         return f"REJECTED: {parse_error}"
 
-    d = policy.Disposition(
+    d = validation.Disposition(
         account_id=account_id,
         verdict=verdict,
         confidence=confidence,
@@ -112,7 +112,7 @@ def record_disposition(
         evidence=refs,
         missing=missing,
     )
-    problems = policy.validate(d)
+    problems = validation.validate(d)
     if problems:
         return "REJECTED, nothing was written:\n" + "\n".join(f"  - {p}" for p in problems)
 
@@ -159,7 +159,7 @@ def _file_action(account_id: str, action: str, target: str, reason: str,
             "REFUSED: no verdict has been recorded for this account yet. "
             "Call record_disposition first — an action must follow a verdict."
         )
-    if contradiction := policy.check_action(action, verdict):
+    if contradiction := validation.check_action(action, verdict):
         return contradiction
 
     unattended = bool(runtime.state.get("unattended"))

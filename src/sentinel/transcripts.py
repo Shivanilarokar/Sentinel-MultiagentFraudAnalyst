@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -39,6 +40,23 @@ from sentinel.config import PROJECT_ROOT
 from sentinel.sweep import resume_case, run_case
 
 TRANSCRIPTS = PROJECT_ROOT / "docs" / "transcripts"
+
+# The escalation matrix reserves block_card and escalate_case for cases that
+# need them, and the officer is rightly conservative. To exercise the gate we
+# have to work a case that genuinely warrants an action and say so — not force
+# one. A shared device with peers carrying confirmed fraud is exactly what the
+# policy says to refer to a human team.
+TASK = (
+    "Work account {account_id}.\n\n"
+    "Establish what the alerts are about, whether the behaviour is unusual for "
+    "this customer, whether anything on file explains it, and whether the "
+    "account is linked to others. Record the verdict with the evidence that "
+    "decided it.\n\n"
+    "If the network analyst reports that this account shares a device with other "
+    "flagged accounts, the escalation matrix requires a referral: a ring needs "
+    "an investigator with powers you do not have. Instruct the disposition "
+    "officer to escalate accordingly."
+)
 
 
 def _action_rows(account_id: str) -> list[dict]:
@@ -91,7 +109,11 @@ def one_path(account_id: str, *, approve: bool, run_tag: str) -> list[str]:
     db.write("DELETE FROM actions WHERE account_id = ?", (account_id,))
 
     lines += ["[1] The supervisor works the case.", ""]
-    result = run_case(account_id, thread_id=f"hitl-{run_tag}-{account_id}")
+    result = run_case(
+        account_id,
+        task=TASK,
+        thread_id=f"hitl-{run_tag}-{account_id}-{uuid.uuid4().hex[:8]}",
+    )
 
     consulted = result.get("specialists_consulted") or list(result.get("findings", {}))
     lines += [f"    specialists consulted : {', '.join(consulted) or '(none recorded)'}",

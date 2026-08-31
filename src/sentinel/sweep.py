@@ -66,7 +66,8 @@ TASK = (
 # ===========================================================================
 # One case
 # ===========================================================================
-def run_case(account_id: str, *, auto: bool = False, thread_id: str | None = None) -> dict:
+def run_case(account_id: str, *, auto: bool = False, thread_id: str | None = None,
+             task: str | None = None) -> dict:
     """Work a single account end to end.
 
     Args:
@@ -74,7 +75,11 @@ def run_case(account_id: str, *, auto: bool = False, thread_id: str | None = Non
         auto: When True the approval gate is off and irreversible actions are
             queued rather than executed. This is what the sweep uses.
         thread_id: Overrides the checkpoint thread, so the same account can be
-            re-run without resuming the previous attempt.
+            re-run without resuming the previous attempt. An abandoned run
+            leaves a checkpoint whose tool calls were never answered, and
+            resuming into that is rejected by the API, so anything that may be
+            interrupted should pass a fresh id.
+        task: Overrides the instruction sent to the supervisor.
 
     Returns:
         A dict with `status` of either `done` or `awaiting_approval`. When it is
@@ -90,7 +95,8 @@ def run_case(account_id: str, *, auto: bool = False, thread_id: str | None = Non
 
     result = supervisor.invoke(
         {
-            "messages": [{"role": "user", "content": TASK.format(account_id=account_id)}],
+            "messages": [{"role": "user",
+                          "content": (task or TASK).format(account_id=account_id)}],
             "account_id": account_id,
             "unattended": auto,
         },

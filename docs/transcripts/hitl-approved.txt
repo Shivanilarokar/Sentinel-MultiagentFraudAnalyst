@@ -1,17 +1,48 @@
 ==============================================================================
   HUMAN APPROVAL GATE - APPROVED PATH
-  account A00594   generated 2026-08-31 17:37:13
+  account A00594   generated 2026-08-31 19:58:15
 ==============================================================================
 
 [1] The supervisor works the case.
 
-    specialists consulted : behaviour, context, network, disposition
-    run status            : done
+    specialists consulted : behaviour, context, network
+    run status            : awaiting_approval
 
-    The disposition officer did not reach for an irreversible action on
-    this run, so there was nothing to approve. That is a legitimate
-    outcome - the escalation matrix reserves block_card and
-    escalate_case for cases that need them - but it means this run
-    does not demonstrate the gate.
+[2] PAUSED. The gate fired BEFORE the tool ran.
 
-    verdict recorded : {'verdict': 'fraud', 'confidence': 'high', 'reasoning': "Alerts R05 fired on 2026-02-27 and 2026-02-28 for high risk merchant bursts at money transfer merchants, detecting multiple large transactions totaling 542,791 Indian Rupees within 2 days, far exceeding the 90-day baseline of 29,314 and max 7,200. The customer was evasive, stating in note N00047 'a friend asked them to receive money and forward it on' (filed after incident), not explaining the outgoing flagged transactions. Dispute DP0033 explicitly denies authorization of flagged transaction T0107963: 'I did not authorise this transaction. I have never shopped at this merchant and my card was in my wallet the whole time.' The account shares device DR001 with multiple customers including one with prior confirmed fraud, indicating organized mule ring activity, supported by network specialist's findings. The convincing denial in dispute DP0033 settled the case as fraud with high confidence."}
+    tool : escalate_case
+    args : "account_id": "A00594",
+           "to_team": "fraud_investigations",
+           "reason": "Account A00594 shares device DR001 with multiple flagged accounts including one with prior confirmed fraud and has a suspicious high volume of money transfer transactions that the customer denies authorizing. This strongly indicates involvement in a mule ring requiring specialized investigation."
+    decisions allowed : ['approve', 'reject']
+
+    rows in the actions table while paused : 0
+    Nothing has been written. No card is stopped. The whole run -
+    supervisor, specialists, findings - is frozen in the checkpointer.
+
+    thread_id : hitl-approve-A00594-550b7db1
+
+[3] The analyst decides: APPROVED.
+
+    Command(resume={'decisions': [{'type': 'approve'}]})
+
+[4] The run resumes and finishes.
+
+    status : done
+
+    rows in the actions table now : 1
+      #13  escalate_case -> fraud_investigations
+          status      : approved
+          approved_by : analyst
+          reason      : Account A00594 shares device DR001 with multiple flagged accounts including one with prior confirmed fraud and has a suspicious high volume of money transfer transactions that the customer denies authorizing. This strongly indicates involvement in a mule ring requiring specialized investigation.
+
+    verdict on file:
+      fraud (high)
+      The R05 rule fired on a series of high-risk money transfer transactions occurring on 27-28 Feb 2026 totaling 542,791 INR, a dramatic increase compared to the customer's previous highest transaction of 7,200 INR. Behaviour specialist findings establish this spending is highly abnormal for this customer. Note N00047, dated 2026-02-28, states: "Customer was evasive when asked about the source of the 
+
+------------------------------------------------------------------------------
+
+  RESULT: the action executed only after sign-off, and is
+  recorded with approved_by=analyst.
+
+==============================================================================

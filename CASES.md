@@ -1,322 +1,290 @@
 # Three worked cases
 
-One obvious fraud, one convincing false positive, and one that could not be
-resolved. Each is chosen from the recorded results by confidence and citation
-depth, not hand-picked, and each shows exactly what the supervisor received
-from every specialist.
-
-Everything below is reproducible: run `sentinel case <id> --show-trail`.
+Each one shows what every specialist found, in full, and how the supervisor weighed them. The findings are reproduced verbatim from the `findings` table — this is exactly what crossed the isolation boundary.
 
 ---
 
-## obvious fraud: `A00115`
+## An obvious fraud — `A00008`
 
-**Verdict: `fraud`, confidence `high`, action `monitor`**
+**Verdict:** `fraud` (high confidence)
 
 ### What fired
 
-| alert | rule | what the rule detects | severity | triggered |
-|---|---|---|---|---|
-| `AL0047` | R02 New device high value | Transaction above 25,000 from a device first seen in the last 24 hours. | high | 2026-03-01T04:06:29 |
-| `AL0048` | R01 Velocity spike | More than 6 authorisations on one card within 60 minutes. | high | 2026-03-01T04:06:29 |
-| `AL0049` | R03 Impossible travel | Two authorisations from different countries less than 3 hours apart. | high | 2026-03-01T04:06:29 |
-| `AL0050` | R07 Night time high value | Transaction above 40,000 between 01:00 and 05:00 local. | high | 2026-03-01T04:06:29 |
+| alert | rule | fired | severity |
+|---|---|---|---|
+| `AL0117` | R02 New device high value | 2026-02-28T01:21:10 | high |
+| `AL0118` | R01 Velocity spike | 2026-02-28T01:21:10 | high |
+| `AL0119` | R03 Impossible travel | 2026-02-28T01:21:10 | high |
+| `AL0120` | R07 Night time high value | 2026-02-28T01:21:10 | high |
 
-Incident window: `2026-03-01T04:06:29` to `2026-03-01T04:51:29`.
-
-### The transactions inside that window
-
-| txn | time | amount | country | merchant | category | result |
-|---|---|---:|---|---|---|---|
-| `T0106861` | 2026-03-01T04:06:29 | 57,828.96 | US | Electronics 857 | electronics | approved |
-| `T0106862` | 2026-03-01T04:15:29 | 52,733.49 | GB | Electronics 274 | electronics | approved |
-| `T0106863` | 2026-03-01T04:24:29 | 53,192.12 | GB | Gift cards 508 | giftcard | approved |
-| `T0106864` | 2026-03-01T04:33:29 | 87,243.30 | AE | Electronics 337 | electronics | approved |
-| `T0106865` | 2026-03-01T04:42:29 | 65,010.36 | SG | Crypto exchange 266 | crypto | approved |
-| `T0106866` | 2026-03-01T04:51:29 | 27,032.48 | US | Crypto exchange 230 | crypto | approved |
-
-### What the file said
-
-**`N00023`** - 2026-03-01T12:06:29, S. Iqbal (email), 0.3 days after the incident
-
-> Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card.
-
-
-### What each specialist reported back
-
-#### Behaviour
-
-*11,977 characters produced inside this specialist, 2,017 crossed back to the supervisor (83% discarded).*
+### The network specialist reported
 
 ```
-Four alerts fired on account A00115 (AL0047, AL0048, AL0049, AL0050), indicating new device high value spend, velocity spike (more than 6 transactions in 60 minutes), impossible travel (different countries in under 3 hours), and high value night time transaction. The incident consisted of 6 transactions inside one hour, totaling approximately 343,041, with the largest transaction being 87,243.3. These 6 transactions happened over 4 countries and 1 device, with 6 transactions occurring at night (between 01:00 and 05:00). No declines were recorded.
+Account A00008 uses 3 devices, all exclusively owned by them with no sharing recorded. There is no link to other flagged accounts via devices.
 
-Compared against the baseline excluding the 7 days prior, the customer normally has 48 transactions averaging 149.08 with a maximum of 2,325.79 and rarely transacts at night (night_txn_rate 0.021). The incident amounts are more than an order of magnitude above normal maximum single transactions and total spend in a short period. The incident occurred on a newly registered device (device age 0 hours), which is a strong signal of possible account takeover or device change. The geography shows multiple countries involved in the incident including US, GB, AE, SG - some of which appear first time during the incident window. This is consistent with the impossible travel alert. The incident features transactions in high-risk merchant categories of crypto and gift cards, normally associated with elevated fraud risk, while the baseline has negligible amounts in these categories.
+However, during the incident, the account made transactions at 3 merchants also used by other flagged accounts over the weekend:
+- Crypto exchange 946 (risk 0.62), shared with 9 other flagged accounts.
+- Gift cards 946 (risk 0.78), shared with 8 other flagged accounts.
+- Electronics 399 (risk 0.25), shared with 8 other flagged accounts.
 
-Credit limit utilization is extreme: the customer’s credit limit is 201,000 but the incident spend over 48 hours is 343,838 (171.1% of limit), making this highly unusual spending.
-
-Summary: The pattern of very high spend far above baseline, multiple countries seen for first time within the incident, very new device, high-risk merchant categories, high velocity in short time, night hours transactions, and credit limit breach is anomalous. No benign signals such as device tenure, familiar countries, or spending in normal categories offset these findings.
-
-Verdict: anomalous.
+While device sharing is absent, merchant overlap with multiple flagged accounts at higher-risk categories like crypto and gift cards suggests some connection to broader suspicious activity. The account is not acting entirely alone given this merchant pattern, though no evidence of device-level collusion or mule rings is found.
 ```
 
-#### Context
-
-*3,547 characters produced inside this specialist, 1,054 crossed back to the supervisor (70% discarded).*
+### The context specialist reported
 
 ```
-Customer profile for A00115: retail segment, simplified KYC, home country India.
+The behaviour analyst found suspicious activity on account A00008 related to an unexpected device registration, which the customer did not perform. The case note (id: N00051) is labeled "after_incident" and states verbatim: "Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card."
 
-Case notes: One note (N00023, 2026-03-01, after alert) states: "Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." This fails the timing test (written after the incident), and it disowns the new device limb of the alert. It is specific to device registration but is not an explanation of the transactions or travel anomaly.
+Applying the policy tests:
 
-Disputes: One open dispute (DP0015, filed 2026-03-02) on a transaction flagged (T0106865, timestamp 2026-03-01) says: "I received no OTP for any of these. Somebody else has access to my account." This is after the incident and disowns the transactions, indicating fraud rather than providing explanation.
+- Timing: The note is "after_incident," meaning the customer is reacting to the alert, so it is not a pre-existing explanation.
+- Subject: The note directly addresses the device registration flagged by the analyst.
+- Specificity: The note is specific and clear, stating that the customer did not perform the device registration, has not travelled, and still holds the physical card.
 
-Prior cases: none on record for this customer.
+Therefore, the customer did not explain or accept the flagged activity; instead, they disowned it, which corroborates fraud rather than explains it.
 
-Assessment: The customer denies and disowns the transactions and device registration but does not provide any pre-existing explanation for the anomalies. Therefore, the case is disowned.
+No disputes were filed by the customer for this account. There are no prior investigations on record.
+
+In summary: The behaviour analyst flagged a device registration the customer did not perform. The customer called in after the incident and said: "They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." (note id N00051) This note disowns, rather than explains, the flagged activity.
 ```
 
-#### Network
-
-*2,717 characters produced inside this specialist, 615 crossed back to the supervisor (77% discarded).*
+### The behaviour specialist reported
 
 ```
-This account A00115 has no shared devices with any other customers, indicating device-wise isolation from other flagged accounts. Examination of merchant overlaps in high-risk cash-out categories such as crypto and gift cards shows only lifts between 0.7 and 1.15 for all merchants used, with readings stating "no more than popularity predicts." This means the merchant overlaps are consistent with normal customer behavior and do not indicate a connection to a fraud network.
+The account A00008 triggered 4 high-severity alerts:
 
-Overall, account A00115 appears isolated, with no device sharing or high-risk merchant overlaps linking it to any other flagged accounts.
+1. AL0117 (R02 New device high value): Fired on a transaction (T0107083) of 34,274 on 2026-02-28 at 01:39:10 from a device first seen a few minutes before (mobile iOS 17 device DX01439 first seen 2026-02-28T01:21:10).
+   - This rule triggers on transactions above 25,000 from a device new within 24 hours.
+
+2. AL0118 (R01 Velocity spike): Fires when more than 6 authorisations occur in 60 minutes.
+   - Incident window shows 3 transactions, 2 approved, none exceeding 6 in 60 minutes.
+
+3. AL0119 (R03 Impossible travel): Two authorisations from different countries less than 3 hours apart.
+   - Incident transactions from GB, DE, and AE within minutes.
+
+4. AL0120 (R07 Night time high value): Transaction above 40,000 between 01:00 and 05:00 local.
+   - Incident has one approved transaction of 64,508 at 01:30.
+
+Spending baseline for this customer over prior 90 days:
+- 103 transactions over 61 active days.
+- Median amount: 77, mean: 282.
+- Largest ever before incident: 4,951.
+- Total spend 29,079.
+- 1 device used consistently.
+- Usual countries: 8, with AE (UAE) having only 1 transaction, biggest 26.
+- Usual active hours: spread around daytime and evening but not early morning.
+
+Incident activity details:
+- 3 transactions within about 2 hours totaling 129,692 (much higher than normal).
+- Devices: Only device used in incident is DX01439, brand new during incident (first seen at 01:21).
+- Geography: Transactions from GB, DE, and AE (United Arab Emirates).
+- All three countries were used before but with varying transaction counts: GB (2 prior, small amounts), DE (3 very small prior), AE (only 1 transaction, amount 26).
+- Transaction categories include electronics (30,910 approved), gift cards (64,508 approved), crypto exchange (34,274 declined).
+- High-risk categories (crypto and gift cards) used before but at much lower volumes (crypto 3 txns for 3,850 total, money transfer 2 txns for 1,393 total).
+
+Summary:
+- The transaction amounts during the incident are roughly 7-20 times larger than any previous transaction, exceeding the customer's largest prior transaction of 4,951 by a large margin.
+- The device for these transactions is brand new and was first seen within minutes of the incident transactions.
+- Geography usage includes countries seen before, but with little prior activity and very small amounts.
+- The timing is unusual (night hours, 01:21-01:39) compared to the customer's usual transaction times.
+- There is a velocity spike alert but the actual count of transactions in the incident window is 3 (below the 6 threshold that triggers the alert, may relate to other activity outside the incident window).
+- The customer shows prior usage of high-risk merchants (crypto, gift cards) but at much smaller amounts.
+- Overall, the pattern suggests a sudden high value, out-of-character spree on a brand new device at unusual hours and split across multiple countries used rarely or with very low amounts before.
+
+Conclusion:
+This spending behavior is abnormal and not normal for customer A00008 given their historical spending patterns, device usage, timing, geography, and transaction amounts. The high transaction amounts on a brand new device combined with the unusual timing and multiple countries in a short timeframe indicate a deviation from baseline behaviour.
 ```
 
-#### Disposition
-
-*28,094 characters produced inside this specialist, 1,269 crossed back to the supervisor (95% discarded).*
+### The disposition specialist reported
 
 ```
-Verdict: fraud with high confidence. Multiple fraud detection alerts triggered on this account, showing suspicious activity such as a high-value transaction on a newly registered device, velocity spikes, impossible travel across countries, and high-value night-time transactions far outside the customer's baseline behaviour. The customer explicitly disowned all transactions and the device registration in a case note (N00023) and a dispute (DP0015), stating the card was still physically with them and no OTP was received, which decisively indicates fraud. There is no legitimate explanation on file, and network analysis shows the account is isolated, consistent with an independent takeover.
-
-Action: The account will be monitored and simultaneously escalated to investigations for further human review. The escalation has been queued for analyst approval and has not yet executed.
-
-Evidence cited includes alerts AL0047, AL0048, AL0049, AL0050; case note N00023 verbatim quoting the customer's claim of no device registration; and dispute DP0015 quoting the customer denying OTP receipt and access.
-
-No card block was applied at this stage since the incident appears historical rather than ongoing money movement, but further action may follow after investigation.
+The verdict for account A00008 is fraud with high confidence. The deciding evidence is the customer's call disowning the new device registration, quoted verbatim from case note N00051: "Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." This note directly contradicts any legitimate use of the new device tied to suspicious high-value transactions across multiple countries and unusual hours. The escalation has been made to the fraud investigations team to handle potential broader suspicious activity connected to this account.
 ```
 
-### How the supervisor weighed them
+### The disposition
 
-Four alerts fired on account A00115: AL0047 flagged a high-value transaction from a device registered within 24 hours, AL0048 detected a velocity spike, AL0049 observed impossible travel across multiple countries, and AL0050 identified a high-value night-time transaction. The incident involved six transactions totaling approximately 343,041 units across four countries at night, while the customer's usual maximum transaction is 2,325.79 with rare night activity and no prior device younger than the current one. The customer is retail segment with simplified KYC and domiciled in India. Crucially, the customer explicitly disowned this activity and device registration in case note N00023 and dispute DP0015, stating the card remains physically with them and no OTP was received, indicating fraud. No legitimate pre-existing explanation is on file. Network analysis shows isolation, supporting an independent fraudulent takeover. The customer denial decisively outweighs behavioural anomaly, resulting in a high confidence fraud verdict.
+The R02 rule detected a high-value transaction of 34,274 from device DX01439, which was new and first seen within minutes of the transaction (AL0117, T0107083). Multiple transactions totaling 129,692 occurred in a two-hour window, far exceeding historical maximums (largest prior 4,951). Transactions happened across GB, DE, and AE, rarely used countries by the customer, during unusual night hours. Case note N00051, filed after the incident, states: "Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card." This note explicitly disowns the device registration and correlates with the suspicious pattern. The customer's disowning of the new device and absence of travel explains the fraudulent nature of the activity. Therefore, the verdict is fraud with high confidence, decided by the customer call disowning the device registration (note N00051).
 
 ### Evidence cited
 
-| kind | id | quote or detail |
+| kind | id | quoted words |
 |---|---|---|
-| alert | `AL0047` |  |
-| alert | `AL0048` |  |
-| alert | `AL0049` |  |
-| alert | `AL0050` |  |
-| case_note | `N00023` | Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card. |
-| dispute | `DP0015` | I received no OTP for any of these. Somebody else has access to my account. |
+| alert | `AL0117` | — |
+| transaction | `T0107083` | — |
+| note | `N00051` | Inbound call from customer. They received an SMS about a device registration they did not perform. They have not travelled and still hold the physical card. |
 
 ---
 
-## convincing false positive: `A00271`
+## A convincing false positive — `A00000`
 
-**Verdict: `legitimate`, confidence `high`, action `none`**
+**Verdict:** `legitimate` (high confidence)
 
 ### What fired
 
-| alert | rule | what the rule detects | severity | triggered |
-|---|---|---|---|---|
-| `AL0343` | R05 High risk merchant burst | Three or more transactions at crypto, gift card or money transfer merchants in 24 hours. | high | 2026-02-27T10:35:24 |
-| `AL0344` | R08 Limit approach | Cumulative spend crosses 90 percent of credit limit within 48 hours. | high | 2026-02-27T10:35:24 |
+| alert | rule | fired | severity |
+|---|---|---|---|
+| `AL0201` | R03 Impossible travel | 2026-03-01T17:29:52 | medium |
 
-Incident window: `2026-02-27T10:35:24` to `2026-02-27T22:35:24`.
-
-### The transactions inside that window
-
-| txn | time | amount | country | merchant | category | result |
-|---|---|---:|---|---|---|---|
-| `T0107810` | 2026-02-27T10:35:24 | 183,518.35 | IN | Money transfer 354 | moneytransfer | approved |
-| `T0107811` | 2026-02-27T13:35:24 | 160,705.08 | IN | Money transfer 927 | moneytransfer | approved |
-| `T0107812` | 2026-02-27T16:35:24 | 195,800.41 | IN | Money transfer 372 | moneytransfer | approved |
-| `T0107813` | 2026-02-27T19:35:24 | 145,229.42 | IN | Money transfer 389 | moneytransfer | approved |
-| `T0107814` | 2026-02-27T22:35:24 | 178,264.30 | IN | Money transfer 752 | moneytransfer | approved |
-
-### What the file said
-
-**`N00206`** - 2026-02-22T10:35:24, R. Menon (chat), 5.0 days before the incident
-
-> Customer runs a small trading business and settles supplier invoices through the account at month end. Volumes are lumpy by design. Source of funds documented.
-
-
-### What each specialist reported back
-
-#### Behaviour
-
-*8,527 characters produced inside this specialist, 1,667 crossed back to the supervisor (80% discarded).*
+### The network specialist reported
 
 ```
-Two high-severity alerts fired on account A00271 for a high risk merchant burst (AL0343) and limit approach (AL0344) starting 2026-02-27 10:35, both triggered by a transaction at a money transfer merchant in India.
+Account A00000 is not linked to any other flagged accounts by shared devices; in fact, this customer uses devices exclusively owned by them. There are no shared devices or device peers involved.
 
-The incident on 2026-02-27 includes 5 approved transactions totaling INR 863,517.56, all at money transfer merchants in India using device D002710, over 12 hours. The largest single transaction was INR 195,800.41. No night transactions or declines occurred.
+Regarding merchant overlap, this account transacted with 4 merchants also used by other flagged accounts over the weekend:
+- Electronics 331 with 15 other flagged accounts
+- Grocery 271 with 9 other flagged accounts
+- Electronics 252 with 7 other flagged accounts
+- Fuel 808 with 5 other flagged accounts
 
-Comparing to baseline excluding the week before incident: the customer averages 139.82 per transaction with a max single txn of 2,111.07 from 136 prior transactions over ~3.5 months. Incident largest amount is ~93x higher, and total spend in 24h is 6,000x higher than average. Typical night txn rate is low (1.5%), and no night txns occurred in incident.
+Despite this merchant overlap, shared devices and device peers are absent, which reduces the likelihood of organised fraud rings through device sharing. The merchant evidence alone does not conclusively link this account to other flagged accounts in an organised fraud network.
 
-Device D002710 used for all transactions is old (over 26,500 hours, registered in Feb 2023) and used throughout the history for 149 txns in total, so device age does not explain risk.
-
-Country India (IN) has been used consistently since account inception; no new geography is involved.
-
-All incident transactions are at high-risk merchant categories (moneytransfer), a significant jump from baseline. Credit limit approach alert reflects very high utilisation in short period.
-
-In summary, the incident shows a sudden burst of very high-value transactions exclusively at risky merchant categories, massively exceeding baseline amounts, but on a familiar device and country, and during daytime. The transaction velocity, amounts, merchant type, and limit utilization are anomalous for this customer's usual behavior.
-
-Verdict: anomalous.
+In conclusion, account A00000 is acting alone in terms of device usage and peers. The moderate merchant overlap alone is not definitive evidence of linkage to a ring.
 ```
 
-#### Context
-
-*4,039 characters produced inside this specialist, 1,100 crossed back to the supervisor (73% discarded).*
+### The context specialist reported
 
 ```
-Customer profile: business segment, full KYC level, home country India.
+The customer under account A00000 provided one relevant explanation before the incident occurred, passing the timing test. The note with ID N00106 dated 2026-02-25, authored by T. Fernandes via chat, states:
 
-Case note N00206 dated 2026-02-22, five days before the incident, states: "Customer runs a small trading business and settles supplier invoices through the account at month end. Volumes are lumpy by design. Source of funds documented." This note explains the high volume and value of transactions, covering the high-value money transfer limb of the alert. It passes timing (before alert), subject (explains high transaction volume in the usual geography, India), and specificity (mentions lumpy volumes and documented source of funds).
+"Customer explained the second device belongs to their son who is at university in SG and uses the card for living costs. Arrangement noted on file."
 
-There is a dispute DP0077 filed on 2026-03-01, after the alert, about one transaction on 2026-02-27 for a money transfer, reason "13.1 goods not received," which is a merchant issue, not denial or explanation of origin of transactions.
+This note specifically covers a second device usage by the customer's son in Singapore, explaining recurring foreign spend in that country. It is specific and names the device user and country, so it also passes the subject and specificity tests for that portion of flagged activity.
 
-Prior case PC0133 closed 2025-07-10 was a false positive where customer confirmed all prior transactions were their own.
+There are no disputes filed on this account explaining or contradicting the flagged activity.
 
-Assessment: explained. The customer's business nature and prior documentation sufficiently explain the anomalous transaction burst.
+The customer's profile shows a long tenure (open since 2020-02-27) and full KYC level, with a high credit limit of 99,000. Prior investigations exist but are irrelevant to this specific flagged activity.
+
+Summary: The customer has provided a prior, specific, and relevant explanation for part of the flagged suspicious activity—usage from a second device in Singapore by their son for living costs, as stated in case note N00106 filed before the incident.
 ```
 
-#### Network
-
-*3,688 characters produced inside this specialist, 588 crossed back to the supervisor (84% discarded).*
+### The behaviour specialist reported
 
 ```
-Account A00271 is isolated in terms of device usage: none of its devices are shared with any other customer, ruling out a coordinated mule ring through device sharing. On the merchant dimension, all high-risk merchants this account used have a lift below 1.5, with readings stating "no more than popularity predicts." This means the merchant overlaps do not exceed the base fraud rate and provide no network signals of suspicious associations. 
+The alert AL0201 R03 Impossible travel (medium severity) fired on account A00000 because there were two authorizations from different countries less than 3 hours apart. The trigger transaction was T0107395 at 2026-03-02 05:29:52 from country SG (Singapore) at Grocery 271 for amount 14,493.
 
-In conclusion, account A00271 is acting alone and shows no network signals from shared devices or merchant overlaps. The finding is: isolated.
+Incident activity in the alert window (2026-03-01T15:29:52 to 2026-03-02T07:29:52):
+- 4 transactions, all approved, total 61,426
+- Transactions:
+  - T0107392: 10,263 in electronics at SG on 2026-03-01 17:29:52
+  - T0107393: 20,979 in electronics at SG on 2026-03-01 21:29:52
+  - T0107394: 15,692 in fuel at SG on 2026-03-02 01:29:52
+  - T0107395: 14,493 in grocery at SG on 2026-03-02 05:29:52
+- All used same device DX01459
+- All transactions from country SG during the incident
+
+Baseline spending for the customer over the previous 90 days before incident:
+- 21 transactions over 19 active days
+- Median amount: 31
+- Mean amount: 115
+- Largest single transaction ever: 1,515
+- Total spending: 2,406
+- Countries used: 2 (IN and TH)
+- Devices used: 1
+- Usual transaction hours: mostly between 17:00 and 20:00, and once at 10:00
+- Country presence: Mostly IN (India) with 18 transactions totaling 2,312, and TH (Thailand) with 3 transactions totaling 94
+
+The presence of Singapore (SG) as transaction country is new for this account, with 4 transactions totaling 61,426 in just about 12 hours. This compares with much smaller and less frequent spend in the customer's usual two countries. The transaction amounts in the incident (all between 10,263 and 20,979) are massively higher than the customer's previous largest transaction of 1,515, and total spend in the incident window is about 25 times the entire 90-day total spend that preceded it.
+
+Summary: The customer's recent activity shows a sudden and significant change in geography, spending amounts, and frequency compared to their past 90-day behavior. The alert of impossible travel is accurate in that there are transactions from countries previously unseen within a short time window. The magnitude and geography change strongly suggest this is not normal spending behavior for this customer.
 ```
 
-#### Disposition
-
-*27,491 characters produced inside this specialist, 1,025 crossed back to the supervisor (96% discarded).*
+### The disposition specialist reported
 
 ```
-The account triggered alerts AL0343 and AL0344 due to a burst of 5 high-value money transfer transactions in India on 2026-02-27, totaling INR 863,517.56, which was anomalous compared to the customer's usual amounts. The behaviour was anomalous but used a familiar old device and normal geography. Case note N00206, dated 2026-02-22, predating the incident, states: "Customer runs a small trading business and settles supplier invoices through the account at month end. Volumes are lumpy by design. Source of funds documented." This explains the high volume and value anomaly that triggered the alerts. The dispute DP0077 filed 2026-03-01 concerns goods not received and does not disown the transactions or legitimacy. Prior case PC0133 confirms customer ownership of transactions with no action needed. Network analysis shows the account isolated without suspicious links. The pre-existing verified business explanation and consistency with alert evidence lead to a high-confidence verdict of legitimate. No action is taken.
+The verdict for account A00000 is legitimate with high confidence. Alert AL0201 R03 flagged impossible travel due to transactions from two countries less than 3 hours apart, highlighting unusual and high spending in Singapore. However, note N00106 dated 2026-02-25, authored by T. Fernandes, explicitly explains that the customer's son, who is studying in Singapore, uses the card for living costs, clarifying the foreign activity. This note predates the incident and directly accounts for the unusual geographic and spending pattern, overriding suspicion. Thus, the activity is explained and not fraudulent. The deciding evidence is the case note N00106 stating: "Customer explained the second device belongs to their son who is at university in SG and uses the card for living costs. Arrangement noted on file."
 ```
 
-### How the supervisor weighed them
+### The disposition
 
-Alerts AL0343 and AL0344 fired on a burst of 5 high-value transactions in India on 2026-02-27, totaling INR 863,517.56 at high-risk merchants. These amounts are anomalous compared to the customer's baseline, but the transactions occurred using a familiar old device within the usual geography. Case note N00206, filed on 2026-02-22, states: "Customer runs a small trading business and settles supplier invoices through the account at month end. Volumes are lumpy by design. Source of funds documented." This note was made before the incident, explaining the high-volume anomaly consistent with the alert. A dispute DP0077 dated 2026-03-01 states: "I did make this purchase but the goods never arrived, so I want to raise a chargeback with the merchant," unrelated to ownership or legitimacy of the transactions underlying the alert. A prior false positive case PC0133 says: "Customer confirmed all transactions were their own. Alert closed with no action." The network analysis shows this account is isolated, with no suspicious links. The pre-existing verified business explanation in N00206, aligned with the alert characteristics and no contradictory evidence, leads to a verdict of legitimate with high confidence.
+Alert AL0201 R03 Impossible travel fired due to two authorisations from different countries less than 3 hours apart, flagging sudden foreign spend in Singapore with 4 transactions totalling 61,426, much higher than the customer's previous max transaction of 1,515 and a new country usage. The file includes note N00106 dated 2026-02-25, authored by T. Fernandes, explaining the card use by the customer's son in Singapore: "Customer explained the second device belongs to their son who is at university in SG and uses the card for living costs. Arrangement noted on file." This note predated the incident and specifically explains the Singapore spend and second device usage, fully accounting for the anomaly. The merchant overlap and device exclusivity do not contradict this explanation. The note N00106 is the deciding evidence establishing legitimacy of this activity.
 
 ### Evidence cited
 
-| kind | id | quote or detail |
+| kind | id | quoted words |
 |---|---|---|
-| alert | `AL0343` |  |
-| alert | `AL0344` |  |
-| case_note | `N00206` | Customer runs a small trading business and settles supplier invoices through the account at month end. Volumes are lumpy by design. Source of funds documented. |
-| dispute | `DP0077` | I did make this purchase but the goods never arrived, so I want to raise a chargeback with the merchant. |
-| prior_case | `PC0133` | Customer confirmed all transactions were their own. Alert closed with no action. |
+| note | `N00106` | Customer explained the second device belongs to their son who is at university in SG and uses the card for living costs. Arrangement noted on file. |
+| alert | `AL0201` | — |
+| transaction | `T0107395` | — |
 
 ---
 
-## could not be resolved: `A00152`
+## One that could not be resolved — `A00025`
 
-**Verdict: `insufficient_evidence`, confidence `high`, action `monitor`**
+**Verdict:** `insufficient_evidence` (high confidence)
 
 ### What fired
 
-| alert | rule | what the rule detects | severity | triggered |
-|---|---|---|---|---|
-| `AL0345` | R03 Impossible travel | Two authorisations from different countries less than 3 hours apart. | medium | 2026-02-28T20:59:38 |
+| alert | rule | fired | severity |
+|---|---|---|---|
+| `AL0063` | R08 Limit approach | 2026-03-01T09:01:55 | high |
 
-Incident window: `2026-02-28T20:59:38` to `2026-03-01T04:59:38`.
-
-### The transactions inside that window
-
-| txn | time | amount | country | merchant | category | result |
-|---|---|---:|---|---|---|---|
-| `T0107815` | 2026-02-28T20:59:38 | 20,652.58 | GB | Grocery 200 | grocery | approved |
-| `T0107816` | 2026-03-01T00:59:38 | 39,005.99 | GB | Fuel 979 | fuel | approved |
-| `T0107817` | 2026-03-01T04:59:38 | 33,951.40 | GB | Jewellery 660 | jewellery | approved |
-
-### What the file said
-
-**`N00207`** - 2026-02-20T20:59:38, T. Fernandes (chat), 8.0 days before the incident
-
-> Customer explained the second device belongs to their son who is at university in GB and uses the card for living costs. Arrangement noted on file.
-
-
-### What each specialist reported back
-
-#### Behaviour
-
-*6,903 characters produced inside this specialist, 1,424 crossed back to the supervisor (79% discarded).*
+### The network specialist reported
 
 ```
-One alert fired: AL0345 under rule R03 "Impossible travel", triggered by two authorisations less than 3 hours apart from different countries.
+Account A00025 is not sharing any devices with other customers, indicating isolation from direct network connections by hardware. However, this account has overlapping merchant activity with flagged accounts at 8 merchants used in the incident. Significant overlaps are seen at electronics merchants 198 and 857, and several jewellery merchants (660, 883, 907, 874), as well as gift card merchant 841 and a transport merchant 131. The number of other flagged accounts transacting at these merchants range from 5 to 15. 
 
-Incident (2026-02-28 20:59 to 2026-03-01 04:59) shows 3 transactions totaling 93,610 with largest single 39,006, all from 1 country (GB). Incident transactions recently appeared from GB for the first time on 2026-02-28. Before this, activity was mostly from IN and several other countries, but not GB. Only one device (DX01490) used in incident, device age 720 hours (~1 month), younger than existing device D001520 (over 2 years old).
-
-Baseline excludes last 7 days, shows 62 transactions averaging 337 with max 7,721, in multiple countries except GB, on mostly older device D001520. No night transactions historically, but incident includes 1 night tx. Credit limit 203,000 with 46% used in 48h span including incident.
-
-Magnitude of incident transactions is roughly 28x baseline max amount; total and velocity are dramatically elevated. New country IP seen first time in incident period. Device age moderate but newer than baseline device, consistent with device change less than two months prior.
-
-In summary: spending amount and velocity far exceed baseline, at night, and from a new country IP appearing first time. Device is not brand new but much younger than baseline device. This spending appears anomalous given the magnitude and geography change.
-
-Assessment: anomalous
+In summary, A00025 is acting alone in terms of device usage but shares merchant overlap with multiple other flagged accounts. This suggests no direct organised fraud ring connection via shared devices but some connection through merchant usage patterns with other flagged accounts this weekend.
 ```
 
-#### Context
-
-*2,879 characters produced inside this specialist, 1,018 crossed back to the supervisor (65% discarded).*
+### The behaviour specialist reported
 
 ```
-Segment: retail, KYC level: full, home country: IN.
+The alert AL0063 "Limit approach" fired on account A00025 due to cumulative spend crossing 90% of credit limit within 48 hours. The trigger transaction was T0106931 at 2026-03-02T03:01:55 for 10,088 at an Electronics merchant.
 
-Case note N00207, dated 2026-02-20, 8 days before the alert, states: "Customer explained the second device belongs to their son who is at university in GB and uses the card for living costs. Arrangement noted on file." This note passes the timing test (before the incident), clearly explains the new device limb of the alert, and is specific in identifying the person (son) and reason (university living costs). It thus covers the new device and country anomaly (GB) limb.
+Reviewing the incident activity on the account:
+- There were 8 transactions totaling 49,045 over roughly 2 days.
+- Transactions ranged from 32 to 10,088 in amount.
+- Transaction channels included app, card_present, and ecom.
+- The device used throughout the incident is D000250, a mobile Android device seen first in 2021, used in 63 transactions prior, showing a long-established device.
+- Geographic activity during the incident included US (1 txn), IN (6 txns), and NL (1 txn). NL is new to this customer.
+- Baseline over the prior 90 days showed:
+  - 42 transactions in 34 active days, total spend 11,640, mean 277, median 51, largest ever 4,580.
+  - Usually transacts in 5 countries including IN and US.
+  - Uses a single device, same D000250.
+  - Usual transaction times cluster around midday and early evening.
+- The incident spend of 49,045 is significantly higher than the customer's 90-day total spend of 11,640, and the largest transaction during incident (10,088) is more than twice their previous largest transaction (4,580).
+- The spike in cumulative spend triggering the limit approach is therefore unusual in terms of amount.
+- The device consistency and partly consistent geography (mostly IN and US present historically) reduces concern but the appearance of a new country NL during the incident is notable.
 
-There are no disputes filed by the customer on this account, so no direct customer words disowning or explaining transactions.
-
-There are no prior investigations or case outcomes on record.
-
-Assessment: partially-explained. The new device and IP in GB limb of the alert is explained by this verified note about the son’s use at university. The sudden high spending and velocity, especially the impulse of large transactions up to 39,006, is not explicitly explained in the notes or disputes.
+Overall, the spending pattern during the incident is markedly above this customer's historical norms in terms of total and per-transaction amounts and includes a new geographic country. Device use is consistent with history. This suggests the spending is not normal for this customer.
 ```
 
-#### Network
-
-*2,339 characters produced inside this specialist, 598 crossed back to the supervisor (74% discarded).*
+### The context specialist reported
 
 ```
-Account A00152 does not share any devices with other customers, indicating it is isolated on the device dimension. Regarding merchant overlap, this account uses several merchants in gaming and money transfer categories, but all have lift values around or below 1.24, with the reading stating "no more than popularity predicts." This means the merchant overlap does not exceed expectations and does not indicate linked fraud activity.
+For account A00025 (customer Chen Reddy), there are no case notes at all that explain the flagged activity or the behaviour analyst's findings. Specifically, there are:
 
-In conclusion, account A00152 shows no evidence of device sharing with fraud-flagged accounts nor suspicious merchant overlap. The account is assessed as isolated.
+- No case notes written explaining or justifying the flagged behaviour.
+- No disputes filed on the account.
+- No prior investigations for this customer.
+
+Because there are no explanations (no narrative notes filed before or after the incident) it means no exculpatory evidence passes the timing, subject, or specificity tests listed by the narrative_reading policy.
+
+What would settle this case in this file is any one of the following:
+- A note recorded before the incident explaining why the flagged transactions or behavior is expected (e.g., a travel notice covering the countries and dates of the transaction).
+- A note recorded after the incident where the customer calmly confirms those transactions or activity, specifically naming them and verifying identity.
+- A relevant dispute filed by the customer explicitly naming the flagged transactions and confirming they authorized them.
+- Prior cases or notes that document a pattern of the customer regularly engaging in similar activity with verification.
+
+Since none of those exist here, the file is silent on the explanation for the flagged activity. An honest and policy-consistent disposition would therefore be insufficient_evidence, explicitly noting that no prior or contemporaneous note explains the anomaly.
 ```
 
-#### Disposition
-
-*22,858 characters produced inside this specialist, 793 crossed back to the supervisor (97% discarded).*
+### The disposition specialist reported
 
 ```
-The disposition for account A00152 is insufficient_evidence with high confidence. Rule R03 "Impossible travel" fired due to transactions in two countries (GB, IN) within 3 hours, using a new device DX01490 for GB. The case note N00207 from before the incident explains the new device and new geography, as it belongs to the customer's son in GB, passing timing, subject, and specificity tests. However, there is no explanation for the sudden high spending amount, velocity, or night transactions, which remain anomalous. The network analysis found the account isolated. Thus, part of the alert is explained, but the central concern—the large rapid transactions—lacks justification on file. Monitoring is appropriate while seeking a case note or customer communication explaining this spending.
+The verdict for account A00025 is insufficient_evidence with high confidence. The decisive evidence is the alert AL0063 triggered by a high cumulative spend well above the customer's historical baseline, including transactions in a new country, combined with the complete absence of any explanatory case notes, disputes, or prior cases that would explain or confirm the flagged activity. This silence in the file leaves the behaviour suspicious but unproven as fraud, meeting the policy standards for an honest insufficient_evidence disposition. To resolve this definitively, a case note or customer communication in advance or contemporaneous to the incident explicitly confirming the transactions and new country use is required. No further action is taken now.
 ```
 
-### How the supervisor weighed them
+### The disposition
 
-Rule R03 'Impossible travel' fired on two transactions less than 3 hours apart from different countries (GB and IN) for account A00152 (AL0345). The behaviour shows three transactions totaling 93,610 with a largest single of 39,006 from a new country GB and a new device DX01490 about one month old used in the incident, contrasting with baseline device over 2 years old, and historical maximum transaction 7,721 with no night transactions. Case note N00207 from 2026-02-20, filed before the incident, explains the new device and geography limb: 'Customer explained the second device belongs to their son who is at university in GB and uses the card for living costs. Arrangement noted on file.' This passes timing, subject, and specificity tests and verifies the new device and geography anomaly. However, it does not explain the sudden high spending magnitude, velocity, or night transactions. The network analysis found the account isolated with no suspicious links. Therefore, while part of the rule trigger is explained legitimately, the key anomaly of large, rapid, and night spending remains unexplained on file, leading to an honest verdict of insufficient_evidence. The artefact needed to settle this case is a customer or case note explaining the large sudden transaction amounts in the short time frame.
+Alert AL0063 fired due to a cumulative spend crossing 90% of credit limit within 48 hours, triggered by a transaction of 10,088 at an Electronics merchant (T0106931). Behaviour data shows 8 transactions totaling 49,045 over 2 days, far above the customer's baseline of 11,640 in 90 days with usual maximum 4,580, plus new country usage (NL). The account used a long-established device D000250, so device is consistent, but the spend pattern is anomalous. The account file has no case notes, disputes, or prior cases explaining or confirming the flagged activity, failing timing, subject and specificity tests for exculpatory evidence (per narrative_reading). Network reports do not implicate device sharing but note merchant overlap with flagged accounts. Without any customer communication or notes explaining the anomaly, the file is silent. The deciding factor is the absence of any explanatory case note or dispute covering the flagged transactions or new country spend. This leaves the behaviour suspicious but unproven fraud. This meets the evidence_standards for insufficient_evidence, with a high confidence verdict due to explicit anomaly and no exculpation.
+
+**What would resolve it:** A case note explaining the high-value transactions and new country spending recorded before the incident, or a customer note or dispute explicitly confirming these transactions.
 
 ### Evidence cited
 
-| kind | id | quote or detail |
+| kind | id | quoted words |
 |---|---|---|
-| alert | `AL0345` |  |
-| device | `DX01490` |  |
-| case_note | `N00207` | Customer explained the second device belongs to their son who is at university in GB and uses the card for living costs. Arrangement noted on file. |
-
-### What would resolve this case
-
-- A case note or customer communication explaining the large sudden transactions in the short time frame.
-
----
+| alert | `AL0063` | — |
+| transaction | `T0106931` | — |
 

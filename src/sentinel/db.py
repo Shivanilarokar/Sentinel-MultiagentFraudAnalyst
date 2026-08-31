@@ -90,13 +90,21 @@ CREATE TABLE IF NOT EXISTS sweep_jobs (
     error        TEXT
 );
 
--- Measured token cost, for WRITEUP.md. One row per model call.
+-- Measured token cost, for WRITEUP.md. One row per agent invocation.
+--
+-- `model_calls` is what makes the single-agent counterfactual computable. An
+-- agent that makes T tool calls makes T+1 model calls, each re-sending its
+-- message list, so input_tokens already embeds that re-processing. Dividing it
+-- back out recovers how much content the context actually held, which is the
+-- quantity a flat agent would have carried across all four domains at once.
 CREATE TABLE IF NOT EXISTS token_ledger (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     account_id    TEXT,
     agent         TEXT NOT NULL,     -- which specialist, or the supervisor
     input_tokens  INTEGER NOT NULL,
     output_tokens INTEGER NOT NULL,
+    model_calls   INTEGER NOT NULL DEFAULT 1,
+    tool_calls    INTEGER NOT NULL DEFAULT 0,
     recorded_at   TEXT NOT NULL
 );
 

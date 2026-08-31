@@ -217,10 +217,11 @@ SUPERVISOR_PROMPT = (
     "Give each specialist a complete, self-contained instruction. They cannot "
     "see this conversation — they see only the string you send, plus the "
     "account id.\n\n"
-    "When you brief the disposition officer, pass on the findings AS THEY WERE "
-    "REPORTED: the note ids, the quoted words, the amounts, the transaction "
-    "ids. It holds no database tools and cannot look anything up. A detail you "
-    "leave out is a detail it cannot cite.\n\n"
+    "When you brief the disposition officer, keep it SHORT — two or three "
+    "sentences saying what you believe the verdict is and which single piece of "
+    "evidence decides it. Every specialist's finding is attached to your brief "
+    "automatically, verbatim, so do NOT repeat them: copying them back costs "
+    "tokens and replaces their exact words with your paraphrase.\n\n"
     "NEVER state a fact a specialist did not report. If you did not read it in "
     "a tool result, you do not know it.\n\n"
     "Expect the specialists to disagree. Behaviour saying 'five transactions, "
@@ -242,18 +243,27 @@ def _record_tokens(result: dict, agent: str, account_id: str) -> None:
 
     Measured rather than estimated: the write-up is worth 10 points and asks for
     the token count the sweep really processed.
+
+    `model_calls` is recorded alongside the totals because input_tokens is a sum
+    over calls, each of which re-sent the whole message list. Without the call
+    count there is no way to recover how much content the context actually held,
+    and therefore no way to model what one flat agent would have cost.
     """
-    total_in = total_out = 0
+    total_in = total_out = calls = tool_calls = 0
     for message in result.get("messages", []):
         usage = getattr(message, "usage_metadata", None)
         if usage:
             total_in += usage.get("input_tokens", 0)
             total_out += usage.get("output_tokens", 0)
+            calls += 1
+        tool_calls += len(getattr(message, "tool_calls", None) or [])
+
     if total_in or total_out:
         db.write(
             "INSERT INTO token_ledger (account_id, agent, input_tokens, "
-            "output_tokens, recorded_at) VALUES (?, ?, ?, ?, ?)",
-            (account_id, agent, total_in, total_out,
+            "output_tokens, model_calls, tool_calls, recorded_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (account_id, agent, total_in, total_out, calls, tool_calls,
              datetime.now().isoformat(timespec="seconds")),
         )
 
@@ -430,9 +440,11 @@ def build_system(
         ids.
 
         Args:
-            instruction: The full brief. State what each specialist found, in
-                their words, with their identifiers, and what you believe the
-                verdict should be.
+            instruction: A SHORT brief, two or three sentences: what you believe
+                the verdict is and which single piece of evidence decides it. Do
+                not restate the specialists' findings — they are attached to
+                this call verbatim, and your paraphrase would replace their
+                exact words with a lossy copy.
         """
         consulted = runtime.state.get("specialists_consulted") or []
         if "context" not in consulted:

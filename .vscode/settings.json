@@ -1,3 +1,11 @@
 {
-    "folder-color.pathColors": []
+  "python.defaultInterpreterPath": "${workspaceFolder}\.venv\Scripts\python.exe",
+  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
+  "python.analysis.autoSearchPaths": true,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.egg-info": true
+  }
 }

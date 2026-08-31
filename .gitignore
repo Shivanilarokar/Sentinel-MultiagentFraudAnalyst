@@ -18,3 +18,6 @@ runtime/
 
 # Reference material, cloned for the assignment brief and the class patterns.
 Reference/
+
+# Backup of the pre-fix env file
+.env.backup

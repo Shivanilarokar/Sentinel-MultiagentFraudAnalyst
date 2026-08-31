@@ -22,8 +22,8 @@ import os
 from sentinel import config, queries
 from sentinel.db import init_runtime, read_only, source_hash
 
-# A00985 is the worked example from the assignment brief: the numbers say
-# account takeover, and one case note filed five hours earlier explains it.
+# A00985 is the clearest example of the problem in the whole queue: the numbers
+# say account takeover, and one case note filed five hours earlier explains it.
 SAMPLE = "A00985"
 
 
@@ -97,7 +97,8 @@ def main() -> None:
 
     print("\n" + "=" * 66)
     print("The numbers say account takeover. The note, filed before the alert,")
-    print("says phone upgrade verified by video KYC. That gap is the assignment.\n")
+    print("says phone upgrade verified by video KYC. Closing that gap is the job,")
+    print("and no threshold on the numbers can do it.\n")
 
 
 if __name__ == "__main__":

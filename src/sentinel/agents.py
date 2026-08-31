@@ -82,8 +82,9 @@ class SupervisorState(PolicyState):
 
 
 # ===========================================================================
-# Prompts. Each is shaped to its own domain — swapping two would visibly break
-# the system, which is what requirement 1 asks for.
+# Prompts. Each is shaped to its own domain. Swapping two would visibly break
+# the system: give the network analyst the context prompt and it holds no tool
+# that returns free text for the narrative tests to be applied to.
 # ===========================================================================
 _FINAL_MESSAGE_RULE = (
     "\n\nYOUR FINAL MESSAGE IS THE ONLY THING THAT REACHES THE SUPERVISOR. "
@@ -241,8 +242,8 @@ SUPERVISOR_PROMPT = (
 def _record_tokens(result: dict, agent: str, account_id: str) -> None:
     """Log what this invocation actually cost, for WRITEUP.md.
 
-    Measured rather than estimated: the write-up is worth 10 points and asks for
-    the token count the sweep really processed.
+    Measured rather than estimated. A sweep over 276 accounts is the only place
+    a context leak shows up as money, so the real figure is worth having.
 
     `model_calls` is recorded alongside the totals because input_tokens is a sum
     over calls, each of which re-sent the whole message list. Without the call

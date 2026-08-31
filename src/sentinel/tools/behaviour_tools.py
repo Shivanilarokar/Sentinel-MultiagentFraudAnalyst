@@ -252,8 +252,8 @@ def get_limit_utilisation(account_id: str) -> str:
     return "\n".join(lines)
 
 
-# The registry. `tests/test_architecture.py` asserts this set is disjoint from
-# every other domain's, which is requirement 1.
+# The registry. `tools/__init__.py` asserts this set is disjoint from every
+# other domain's, so a tool cannot quietly end up in two specialists.
 BEHAVIOUR_TOOLS = [
     get_alerts,
     get_incident_activity,

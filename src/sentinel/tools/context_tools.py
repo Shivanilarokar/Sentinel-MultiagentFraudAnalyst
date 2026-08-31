@@ -1,6 +1,6 @@
 """Context tools: did the customer already explain this?
 
-This is the module the assignment is really about. The database will readily
+This is the module that decides most of the queue. The database will readily
 report six transactions in forty minutes from a new device. What it will not
 volunteer is that a colleague typed an explanation two weeks earlier.
 

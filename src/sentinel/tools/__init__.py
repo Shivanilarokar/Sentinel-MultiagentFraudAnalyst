@@ -1,8 +1,8 @@
 """The tool registry, and the isolation it guarantees.
 
-Requirement 1 asks for four specialists, "each with its own prompt and **only**
-the tools for its own domain". That is easy to claim and easy to get wrong once
-a fifth tool looks useful in two places.
+Four specialists, each holding only the tools for its own domain. That is easy
+to claim and easy to get wrong the first time a fifth tool looks useful in two
+places.
 
 So the four sets are declared here in one place, and `check_isolation()` proves
 they are pairwise disjoint. `tests/test_architecture.py` asserts it, and
@@ -14,8 +14,8 @@ they are pairwise disjoint. `tests/test_architecture.py` asserts it, and
     disposition   3 tools   writes only. Holds no read tool at all.
 
 The supervisor appears nowhere in this file, because it holds none of these
-tools. It holds four wrappers, one per specialist, and no database access —
-which is requirement 2.
+tools. It holds four wrappers, one per specialist, and no database access at
+all.
 
     python -m sentinel.tools
 """
@@ -85,7 +85,7 @@ def main() -> None:
     else:
         print("  Pairwise disjoint: no tool appears in two domains.")
         print("  Disposition holds no read tool.")
-        print("  Requirement 1 satisfied.")
+        print("  Each specialist can only ask its own domain's questions.")
     print()
 
 

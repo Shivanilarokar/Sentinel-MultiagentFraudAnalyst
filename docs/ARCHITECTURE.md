@@ -1,6 +1,6 @@
 # Architecture
 
-Three views: the system as the assignment draws it, the static structure, and what
+Three views: the system in the large, the static structure, and what
 happens on one case.
 
 ---
@@ -9,7 +9,7 @@ happens on one case.
 
 ![architecture](architecture.png)
 
-Rendered from the assignment README's own mermaid source, unchanged.
+The shape of the system, top to bottom.
 
 ```
 Layer 3   supervisor           routes; four tools; no database access
@@ -17,13 +17,17 @@ Layer 2   four specialists     natural language in, natural language out
 Layer 1   SQLite-backed tools  exact arguments, real rows
 ```
 
-Two documented deviations from that drawing:
+Two decisions worth stating, because both could reasonably have gone the other
+way:
 
-1. **Network also loads policy.** The arrow is missing in the brief, but
-   mule-ring-versus-family-tablet is a policy judgement.
-2. **The three sweep tools sit on the operator surface, not the supervisor.**
-   `RUBRIC.md` caps the supervisor at four tools. The sweep *drives* the supervisor —
-   one isolated invocation per account — rather than being called by it.
+1. **The network analyst loads policy too.** Telling a mule ring from a family
+   tablet is a judgement call, not a count, so it needs the same documents the
+   other two specialists read.
+2. **The three sweep tools sit on the operator surface, not on the supervisor.**
+   The relationship runs the other way round: the sweep *drives* the supervisor,
+   one isolated invocation per account. Hanging them off the supervisor would
+   let it start a sweep of itself, and would push it from four tools to seven —
+   at which point it is no longer routing, it is orchestrating.
 
 ---
 

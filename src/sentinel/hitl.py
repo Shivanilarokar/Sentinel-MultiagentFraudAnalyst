@@ -1,8 +1,8 @@
 """The approval gate, demonstrated on both paths.
 
-Requirement 5 asks for a run that pauses, and two transcripts — one approved,
-one rejected — that continue correctly. This produces them, from real runs,
-into `docs/transcripts/`.
+An approval gate is only worth having if both paths work, so this exercises both
+against real runs and writes the transcripts to `docs/transcripts/`. A gate that
+has only ever been tested on the happy path is an untested gate.
 
 Where the pieces go, because getting it backwards is the usual mistake:
 

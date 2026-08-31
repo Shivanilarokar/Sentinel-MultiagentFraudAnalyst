@@ -1,8 +1,11 @@
 """Progressive disclosure over the policy documents.
 
-Requirement 4: "Fraud typologies, risk appetite and escalation thresholds belong
-in files an analyst can edit without touching code. An agent loads the one it
-needs, when it needs it, instead of carrying all of them in every prompt."
+Typologies, risk appetite and escalation thresholds belong in files an analyst
+can edit without touching code. With policy in Python, moving a threshold is a
+pull request; with policy in files, it is somebody editing a document.
+
+An agent loads the one it needs, when it needs it, instead of carrying all of
+them in every prompt.
 
 Three levels of disclosure, the same shape the class taught:
 
@@ -80,7 +83,7 @@ def discover_policies(directory: Path = POLICIES_DIR) -> list[Policy]:
     """Scan the policy directory fresh, so an edit takes effect immediately.
 
     Called on every model call. That is the point: a static list read once at
-    import time would make requirement 4 impossible to demonstrate.
+    import time would mean an analyst's edit did nothing until a restart.
     """
     return [_parse(p) for p in sorted(directory.glob("*.md"))]
 
@@ -325,7 +328,7 @@ def main() -> None:
 
     print("\n" + "=" * 72)
     print("Edit any file in src/sentinel/policies/ and behaviour changes on the")
-    print("next model call. No code change, no restart. Requirement 4.\n")
+    print("next model call. No code change, no restart, no redeploy.\n")
 
 
 __all__ = [

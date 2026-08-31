@@ -74,10 +74,10 @@ def write_dispositions() -> str:
 
     out += [
         "",
-        "The brief states roughly a third of this queue is genuine fraud and "
-        "about 30% of the hard cases cannot be resolved from what is on file. "
-        "`insufficient_evidence` is used where the record is genuinely silent, "
-        "and every such row names what would settle it.",
+        "`insufficient_evidence` is used where the record is genuinely silent on "
+        "what was flagged, and every such row names what would settle it. Forcing "
+        "those cases into fraud or legitimate would make the whole table less "
+        "trustworthy, not more.",
         "",
         "---",
         "",
@@ -284,11 +284,10 @@ def write_writeup() -> str:
         f"{tokens['per_account_tokens']:,.0f} tokens and "
         f"${tokens['per_account_cost']:.4f} per account.",
         "",
-        "The brief suggests roughly 400,000 tokens for the full sweep. That works "
-        "out at about 1,449 tokens per account, which is less than four "
-        "specialists spend on system prompts alone before reading anything. The "
-        "figures above are what was actually metered, from `usage_metadata` on "
-        "every model response.",
+        "These are metered figures, taken from `usage_metadata` on every model "
+        "response, not an estimate. Four specialists spend roughly 10,000 tokens "
+        "on system prompts alone before reading a single row, so any figure much "
+        "below that is measuring something other than a system that reads the file.",
         "",
         "## The single-agent comparison",
         "",

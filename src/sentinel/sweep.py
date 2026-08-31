@@ -1,13 +1,14 @@
 """Running cases: one at a time with a human, or all 276 in the background.
 
-Two modes, exactly as the brief specifies.
+Two modes.
 
 **Single case.** `run_case` works one account with the approval gate live. If the
 disposition officer reaches for `block_card` or `escalate_case`, the whole run
 freezes in the checkpointer and returns `awaiting_approval` with the proposed
 action. `resume_case` thaws it, on approval or on rejection.
 
-**Queue sweep.** Three tools, the pattern the brief asks for:
+**Queue sweep.** Three tools, so that starting the work and waiting for it are
+separate decisions:
 
     start_queue_sweep      returns a job id immediately
     check_sweep_status     progress, without blocking
@@ -114,7 +115,8 @@ def resume_case(thread_id: str, *, approve: bool, message: str = "") -> dict:
             expected to record the refusal rather than retry the action.
 
     A rejection is not a retry. The officer is told the action was refused and
-    must proceed without it — the rubric scores whether rejections are honoured.
+    must proceed without it. A rejection the model works around is not an
+    approval gate, it is a speed bump.
     """
     decision = (
         {"type": "approve"} if approve

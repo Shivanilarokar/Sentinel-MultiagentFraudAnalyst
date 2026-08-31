@@ -28,7 +28,8 @@ from dataclasses import dataclass, field
 from sentinel.db import query_one
 
 # ---------------------------------------------------------------------------
-# The vocabulary. The brief fixes both of these lists.
+# The vocabulary. Both lists are closed: a verdict outside them is not a verdict
+# the desk can act on, and a free-text confidence cannot be sorted or counted.
 # ---------------------------------------------------------------------------
 VERDICTS = ("fraud", "legitimate", "insufficient_evidence")
 CONFIDENCES = ("high", "medium", "low")
@@ -225,9 +226,10 @@ def validate(d: Disposition) -> list[str]:
 def check_action(action: str, verdict: str) -> str | None:
     """No action may contradict its own verdict.
 
-    The rubric scores severity as proportionate: card blocks are for cases where
-    money is still moving. Blocking the card of an account you just called
-    legitimate is the failure this catches.
+    Severity has to be proportionate: card blocks are for cases where money is
+    still moving. Blocking the card of an account you just called legitimate is
+    the failure this catches, and it is a real harm with a real complaint
+    attached.
     """
     if action in ("block_card", "escalate_case") and verdict == "legitimate":
         return (

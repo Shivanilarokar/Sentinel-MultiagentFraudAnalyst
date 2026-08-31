@@ -8,10 +8,10 @@ Three questions this answers, all from recorded data rather than estimates:
     3. What would one agent have cost?    the counterfactual, modelled from
                                           the same measured content
 
-Question 3 is the one the write-up is graded on, and it cannot be measured
-directly without running the expensive version. So it is *modelled* from real
-numbers, and the model is stated openly below rather than hidden behind a
-round figure.
+Question 3 cannot be measured directly without running the expensive version,
+so it is *modelled* from real numbers. The model is stated openly below rather
+than hidden behind a round figure, because an unexplained multiplier is not an
+argument.
 
     python -m sentinel.analysis
 """

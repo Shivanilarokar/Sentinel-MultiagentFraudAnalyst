@@ -25,8 +25,8 @@ volunteer is that a colleague typed an explanation two weeks earlier.
 The two rules that fire most are the two least reliable.
 
 Grid-searching numeric rules tops out at **78%**. Always answering "legitimate"
-scores **66%**. Reading the case notes reaches **92%**. Those fourteen points
-are the assignment.
+scores **66%**. Reading the case notes reaches **92%**. Those fourteen points are
+the entire reason this is a language problem and not a threshold problem.
 
 Around **30% of hard cases cannot be resolved** from what is on file.
 `insufficient_evidence` is a real verdict that scores; confident guessing does not.
@@ -121,14 +121,17 @@ graph TD
     class GATE gate
 ```
 
-### Two documented deviations from the brief's diagram
+### Two decisions worth stating
 
-1. **Network also loads policy.** The brief's arrow skips it, but
-   mule-ring-versus-family-tablet is squarely a policy judgement.
-2. **The three sweep tools sit on the operator surface (CLI/API), not on the
-   supervisor.** `RUBRIC.md` requires the supervisor hold *"four tools
-   maximum"*; adding start/status/collect would make seven. The sweep still
-   drives the supervisor — one isolated invocation per account.
+1. **The network analyst loads policy too.** Telling a mule ring from a family
+   tablet is a judgement call, not a count, so it reads the same documents the
+   behaviour and context specialists do.
+2. **The three sweep tools sit on the operator surface (CLI), not on the
+   supervisor.** The relationship runs the other way: the sweep drives the
+   supervisor, one isolated invocation per account. Hanging start/status/collect
+   off the supervisor would let it start a sweep of itself, and would take it
+   from four tools to seven — at which point it is orchestrating rather than
+   routing.
 
 ## 4. The isolation mechanism
 

@@ -44,7 +44,7 @@ python -m sentinel.tools                 # tool isolation report
 
 `data/sentinel.db` ships with the repository. No downloads, no setup beyond a key.
 
-Two modes, exactly as the assignment specifies:
+Two modes:
 
 ```bash
 sentinel case A00985 --show-trail        # one account, full reasoning trail
@@ -120,9 +120,9 @@ sequenceDiagram
 
 ---
 
-## The five requirements
+## How it works
 
-### 1 · Four specialist subagents &nbsp;`required`
+### Four specialists, each blind to the others' tools
 
 Each holds only its own domain's tools, and swapping them would visibly break the
 system.
@@ -136,10 +136,12 @@ network      3 tools   get_shared_devices, get_device_peers, get_merchant_overla
 disposition  3 tools   record_disposition, block_card, escalate_case
 ```
 
-**Done when** — `python -m sentinel.tools` prints the sets and confirms they are
-pairwise disjoint, and that Disposition holds no read tool at all.
+`python -m sentinel.tools` prints the sets and checks they are pairwise
+disjoint, and that Disposition holds no read tool at all. It is easy to claim
+this split and easy to lose it the first time a fifth tool looks useful in two
+places, so it is asserted rather than trusted.
 
-### 2 · A supervisor that only routes &nbsp;`required`
+### A supervisor that routes and nothing else
 
 Four tools, no database access, and the ordering is enforced rather than requested:
 `consult_disposition_officer` inspects `specialists_consulted` and returns an error
@@ -149,7 +151,7 @@ Four tools, no database access, and the ordering is enforced rather than request
 > reach 78% on this queue and this account may well be one of the two thirds that
 > did nothing wrong."*
 
-### 3 · Asynchronous queue sweep &nbsp;`required`
+### The sweep returns before it finishes
 
 The three-tool pattern: `start_queue_sweep`, `check_sweep_status`,
 `collect_sweep_results` (`src/sentinel/sweep.py`).
@@ -157,9 +159,11 @@ The three-tool pattern: `start_queue_sweep`, `check_sweep_status`,
 Starting a sweep does three cheap things — one `SELECT DISTINCT account_id FROM
 alerts`, one job row, one `Thread.start()` — and returns.
 
-**Measured at 0.0057 s.** The rubric asks for under five seconds.
+**Measured at 0.0057 s.** Starting the work and waiting for it are separate
+decisions, which is the whole reason for three tools rather than one blocking
+call.
 
-### 4 · Policy in documents, loaded on demand &nbsp;`optional, credited`
+### Policy lives in files an analyst can edit
 
 Five editable Markdown files with YAML front-matter in `src/sentinel/policies/`:
 
@@ -193,7 +197,7 @@ demonstrates that by writing a document while the process is running.
 Every load is recorded in `policy_loads`, so on-demand loading is provable after a
 run rather than merely claimed.
 
-### 5 · Human approval before anything irreversible &nbsp;`required`
+### Nothing irreversible happens without a person
 
 `HumanInTheLoopMiddleware` on the **disposition subagent** (where the dangerous tools
 are); the checkpointer on the **supervisor** (the run that has to freeze and thaw).

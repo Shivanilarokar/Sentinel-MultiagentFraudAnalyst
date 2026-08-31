@@ -1,0 +1,35 @@
+graph TD
+    Q[/"<b>THE QUEUE</b><br/>276 alerted accounts"/] --> SUP
+
+    SUP["<b>SUPERVISOR</b><br/>decides who to ask, and in what order<br/>holds seven tools, never queries the database<br/>context stays small"]
+
+    SUP ==> SWEEP["<b>QUEUE SWEEP</b><br/>start · check status · collect<br/>returns a job id immediately<br/>each account read in its own context"]
+    SWEEP -.one supervisor<br/>per account.-> SUP
+
+    SUP --> BEH["<b>1 · BEHAVIOUR</b><br/>is this normal for this customer?<br/>velocity · amounts · geography · devices<br/>7 tools"]
+    SUP --> CTX["<b>2 · CONTEXT</b><br/>what did the customer tell us?<br/>case notes · disputes · prior cases<br/>4 tools"]
+    SUP --> NET["<b>3 · NETWORK</b><br/>is this account alone?<br/>shared devices · merchant overlap<br/>3 tools"]
+    SUP --> DIS["<b>4 · DISPOSITION</b><br/>writes the case decision<br/>blocks cards · escalates<br/>3 tools, holds no read tool"]
+
+    BEH -.loads.-> POL[["<b>policy documents</b><br/>five editable .md files<br/>typologies · thresholds · escalation"]]
+    CTX -.loads.-> POL
+    NET -.loads.-> POL
+    DIS -.loads.-> POL
+
+    DIS ==> GATE{{"<b>HUMAN APPROVAL</b><br/>blocking a card and escalating<br/>cannot be undone<br/>approve or reject, never edit"}}
+    GATE ==> OUT[/"<b>THE DISPOSITION</b><br/>fraud · legitimate · insufficient evidence<br/>every citation resolved to a real row"/]
+
+    BEH --> DB[(sentinel.db<br/>read-only)]
+    CTX --> DB
+    NET --> DB
+
+    classDef sup fill:#E8F1FC,stroke:#1B5FAA,stroke-width:3px,color:#0B2545
+    classDef spec fill:#F6EEFB,stroke:#7A4FA3,stroke-width:2px,color:#3B2050
+    classDef store fill:#EEF7EC,stroke:#3F7D3A,stroke-width:2px,color:#1E3D1C
+    classDef gate fill:#FFF3E2,stroke:#B26B00,stroke-width:3px,color:#5A3600
+    classDef io fill:#F2F4F7,stroke:#5B6B7F,stroke-width:2px,color:#20303F
+    class SUP sup
+    class BEH,CTX,NET,DIS,SWEEP spec
+    class DB,POL store
+    class GATE gate
+    class Q,OUT io

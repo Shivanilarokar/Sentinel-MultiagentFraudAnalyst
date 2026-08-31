@@ -57,6 +57,9 @@ sentinel sweep                           # all 276 in the background, job id imm
 
 ![architecture](docs/architecture.png)
 
+<sub>Source: [`docs/architecture.mmd`](docs/architecture.mmd). Regenerate with
+`npx @mermaid-js/mermaid-cli -i docs/architecture.mmd -o docs/architecture.png -w 1500 -b white`.</sub>
+
 ```
 Layer 3   supervisor          decides who to ask, and in what order
 Layer 2   four specialists    natural language in, natural language out

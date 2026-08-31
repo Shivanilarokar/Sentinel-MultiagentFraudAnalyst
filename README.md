@@ -38,8 +38,8 @@ uv pip install -e ".[dev]"
 
 cp .env.example .env                     # then add your OPENAI_API_KEY
 
-python -m sentinel.doctor                # environment, DB integrity, sample case
 python -m sentinel.tools                 # tool isolation report
+pytest -q                                # 76 offline conformance tests
 ```
 
 `data/sentinel.db` ships with the repository. No downloads, no setup beyond a key.
@@ -256,10 +256,12 @@ sqlite3.connect(f"file:{path}?mode=ro", uri=True)   # + PRAGMA query_only = 1
 An `INSERT` raises `OperationalError`, rather than being filtered out by a pattern.
 Everything this system writes goes to `runtime/actions.db`, a different file.
 
-`python -m sentinel.doctor` proves it on every run:
+`tests/test_database.py` asserts it:
 
-```
-write attempt          refused (attempt to write a readonly database)
+```python
+with pytest.raises(sqlite3.OperationalError, match="readonly"):
+    with db.read_only() as conn:
+        conn.execute("INSERT INTO alerts (alert_id) VALUES ('X')")
 ```
 
 ---
@@ -286,7 +288,6 @@ part of the queue.
 ## Commands
 
 ```bash
-sentinel doctor                      # environment, DB integrity, sample case
 sentinel case A00985 --show-trail    # one account, every specialist's finding
 sentinel case A00782 --auto          # skip approval prompts, defer actions
 sentinel sweep                       # all 276, live progress
@@ -301,7 +302,7 @@ sentinel reset                       # drop run state; never touches data/sentin
 ```
 
 Every command is also a module, so nothing needs the console script installed:
-`python -m sentinel.doctor`, `python -m sentinel.tools`,
+`python -m sentinel.tools`,
 `python -m sentinel.policy_skills`, `python -m sentinel.analysis`,
 `python -m sentinel.reports`, `python -m sentinel.hitl`.
 
@@ -321,7 +322,7 @@ src/sentinel/
   analysis.py          tokens, the isolation boundary, the single-agent model
   reports.py           the four generated deliverables
   hitl.py              the approve and reject transcripts
-  doctor.py  cli.py    operator surfaces
+  cli.py               the operator surface
   tools/               one module per domain, plus the registry and isolation check
   policies/            five editable .md policy documents
 notebooks/             the build, one concept per notebook

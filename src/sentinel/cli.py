@@ -1,6 +1,5 @@
 """The operator surface.
 
-    sentinel doctor                    environment, database integrity, tool isolation
     sentinel case A00985               one account, with the approval gate live
     sentinel case A00985 --auto        skip approvals, queue irreversible actions
     sentinel sweep                     all 276, live progress
@@ -24,7 +23,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from sentinel import analysis, db, doctor, middleware, reports, sweep, transcripts
+from sentinel import analysis, db, middleware, reports, sweep, transcripts
 
 app = typer.Typer(add_completion=False, help="Multi-agent fraud triage for the Sentinel Bank queue.")
 console = Console()
@@ -34,12 +33,6 @@ VERDICT_STYLE = {
     "legitimate": "green",
     "insufficient_evidence": "yellow",
 }
-
-
-@app.command("doctor")
-def doctor_cmd() -> None:
-    """Check the environment, the database and the tool isolation."""
-    doctor.main()
 
 
 @app.command()

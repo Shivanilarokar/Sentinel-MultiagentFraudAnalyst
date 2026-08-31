@@ -5,8 +5,8 @@ to claim and easy to get wrong the first time a fifth tool looks useful in two
 places.
 
 So the four sets are declared here in one place, and `check_isolation()` proves
-they are pairwise disjoint. `tests/test_architecture.py` asserts it, and
-`sentinel doctor` prints it.
+they are pairwise disjoint, `tests/test_architecture.py` asserts it, and
+`python -m sentinel.tools` prints it.
 
     behaviour     7 tools   reads transactions, devices, geography
     context       4 tools   reads case notes, disputes, prior cases

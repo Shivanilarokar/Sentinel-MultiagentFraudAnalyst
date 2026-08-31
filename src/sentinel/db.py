@@ -41,7 +41,7 @@ def query_one(sql: str, params: tuple | dict = ()) -> sqlite3.Row | None:
 
 
 def source_hash() -> str:
-    """SHA-256 of the source database, so `doctor` can prove it is untouched."""
+    """SHA-256 of the source database, so a run can prove it is untouched."""
     digest = hashlib.sha256()
     with open(SOURCE_DB, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
@@ -169,9 +169,8 @@ def reset_runtime() -> None:
 
 
 if __name__ == "__main__":
-    # Creating or resetting the runtime tables. The health check that proves the
-    # source database is read-only lives in `sentinel.doctor`, so it is not
-    # repeated here.
+    # Creating or resetting the runtime tables. Whether the source database
+    # refuses writes is asserted in tests/test_database.py.
     import sys
 
     if "--reset" in sys.argv:

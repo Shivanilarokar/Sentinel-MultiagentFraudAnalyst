@@ -169,6 +169,9 @@ def reset_runtime() -> None:
 
 
 if __name__ == "__main__":
+    # Creating or resetting the runtime tables. The health check that proves the
+    # source database is read-only lives in `sentinel.doctor`, so it is not
+    # repeated here.
     import sys
 
     if "--reset" in sys.argv:
@@ -177,20 +180,3 @@ if __name__ == "__main__":
     else:
         init_runtime()
         print(f"runtime ready : {ACTIONS_DB}")
-
-    with read_only() as conn:
-        alerts = conn.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
-        accounts = conn.execute(
-            "SELECT COUNT(DISTINCT account_id) FROM alerts").fetchone()[0]
-        txns = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
-
-    print(f"source db     : {alerts} alerts on {accounts} accounts, {txns:,} transactions")
-    print(f"sha256        : {source_hash()[:16]}...")
-
-    # Prove the read-only guarantee rather than asserting it in a comment.
-    try:
-        with read_only() as conn:
-            conn.execute("INSERT INTO alerts (alert_id) VALUES ('X')")
-        print("read-only     : FAILED - the source database accepted a write")
-    except sqlite3.OperationalError as exc:
-        print(f"read-only     : enforced ({exc})")

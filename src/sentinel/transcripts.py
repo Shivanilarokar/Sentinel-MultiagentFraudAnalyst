@@ -167,8 +167,8 @@ def one_path(account_id: str, *, approve: bool, run_tag: str) -> list[str]:
     return lines
 
 
-def main() -> None:
-    account_id = sys.argv[1] if len(sys.argv) > 1 else "A00594"
+def main(account_id: str = "A00594") -> None:
+    """Run both paths and write the transcripts."""
     db.init_runtime()
 
     print(f"Generating approval-gate transcripts for {account_id}...\n")
@@ -187,4 +187,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1] if len(sys.argv) > 1 else "A00594")

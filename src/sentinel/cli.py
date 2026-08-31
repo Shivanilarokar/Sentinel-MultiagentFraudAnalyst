@@ -12,6 +12,7 @@
     sentinel policies                  the progressive-disclosure report
     sentinel analyse                   tokens, isolation, the single-agent model
     sentinel report                    regenerate the four deliverables
+    sentinel transcripts A00594        run the approval gate both ways, write the transcripts
     sentinel reset                     drop run state; never touches data/sentinel.db
 """
 
@@ -23,7 +24,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from sentinel import agents, analysis, db, doctor, middleware, reports, sweep
+from sentinel import analysis, db, doctor, middleware, reports, sweep, transcripts
 
 app = typer.Typer(add_completion=False, help="Multi-agent fraud triage for the Sentinel Bank queue.")
 console = Console()
@@ -35,13 +36,10 @@ VERDICT_STYLE = {
 }
 
 
-@app.command()
+@app.command("doctor")
 def doctor_cmd() -> None:
     """Check the environment, the database and the tool isolation."""
     doctor.main()
-
-
-app.command("doctor")(doctor_cmd)
 
 
 @app.command()
@@ -92,7 +90,7 @@ def case(
     console.print()
 
 
-@app.command()
+@app.command("sweep")
 def sweep_cmd(
     limit: int = typer.Option(None, "--limit", help="Work only the first N accounts."),
     workers: int = typer.Option(None, "--workers", help="Accounts to run concurrently."),
@@ -121,8 +119,6 @@ def sweep_cmd(
     console.print("\n[bold green]Sweep complete[/bold green]\n")
     _print_verdicts(result)
 
-
-app.command("sweep")(sweep_cmd)
 
 
 @app.command()
@@ -183,6 +179,14 @@ def analyse() -> None:
 def report() -> None:
     """Regenerate DISPOSITIONS.md, CASES.md, WRITEUP.md and EVIDENCE_AUDIT.md."""
     reports.main()
+
+
+@app.command("transcripts")
+def transcripts_cmd(
+    account_id: str = typer.Argument("A00594", help="The account to demonstrate on."),
+) -> None:
+    """Run the approval gate on both paths and write docs/transcripts/."""
+    transcripts.main(account_id)
 
 
 @app.command()

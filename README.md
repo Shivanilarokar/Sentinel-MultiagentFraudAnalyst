@@ -191,7 +191,7 @@ POLICY_GATES = {
 ```
 
 The catalog is re-scanned on **every model call**, so editing a file changes
-behaviour with no code change and no restart. `python -m sentinel.policy_skills`
+behaviour with no code change and no restart. `python -m sentinel.middleware`
 demonstrates that by writing a document while the process is running.
 
 Every load is recorded in `policy_loads`, so on-demand loading is provable after a
@@ -224,7 +224,7 @@ queued* (`sentinel approvals`), never executed. An unattended run that could blo
 
 ## What stops it inventing things
 
-Three layers, in the order they fire — `src/sentinel/policy.py`.
+Three layers, in the order they fire — `src/sentinel/validation.py`.
 
 **1 · Shape.** `ALxxxx1` is a placeholder and `R02` is a rule id where an alert id
 belongs. Both are refused with an explanation the model can act on.
@@ -303,7 +303,7 @@ sentinel reset                       # drop run state; never touches data/sentin
 
 Every command is also a module, so nothing needs the console script installed:
 `python -m sentinel.tools`,
-`python -m sentinel.policy_skills`, `python -m sentinel.analysis`,
+`python -m sentinel.middleware`, `python -m sentinel.analysis`,
 `python -m sentinel.reports`, `python -m sentinel.hitl`.
 
 ---
@@ -312,24 +312,103 @@ Every command is also a module, so nothing needs the console script installed:
 
 ```
 src/sentinel/
-  config.py            paths, models, sweep workers, the frozen clock (2 Mar 2026)
-  db.py                read-only source DB (mode=ro + query_only + sha256) | runtime DB
-  queries.py           every SQL query, grouped by domain. No LLM.
-  policy.py            shape / ownership / quote checks, and the hard rules
-  policy_skills.py     progressive disclosure + the two middlewares
-  agents.py            four specialists, four wrappers, the supervisor
-  sweep.py             run_case / resume_case, and the three sweep tools
-  analysis.py          tokens, the isolation boundary, the single-agent model
-  reports.py           the four generated deliverables
-  hitl.py              the approve and reject transcripts
-  cli.py               the operator surface
-  tools/               one module per domain, plus the registry and isolation check
-  policies/            five editable .md policy documents
-notebooks/             the build, one concept per notebook
-docs/                  transcripts/
-data/sentinel.db       read-only, hash-verified
-runtime/               everything written at run time (gitignored)
+  config.py              paths, the two model tiers, the frozen clock (2 Mar 2026)
+  db.py                  read-only source connection | runtime connection | now()
+  queries.py             every SQL query, grouped by domain. No model anywhere.
+  validation.py          shape / ownership / quote checks, and the verdict rules
+
+  agents/                one module per agent: a prompt and a toolset
+    behaviour.py         is this spending normal for this customer?
+    context.py           did anyone already explain it?
+    network.py           is this account acting alone?
+    disposition.py       decide, record, act. Holds no read tool.
+    supervisor.py        four wrappers, the isolation boundary, no database access
+    common.py            the final-message rule, shared by all four
+    __init__.py          build_system(), the shared rate limiter, the model cache
+
+  middleware/            everything that wraps an agent without changing it
+    state.py             PolicyState, SupervisorState
+    disclosure.py        the policy catalog, and load_policy
+    gate.py              refuses a write until its policy has been read
+    approval.py          freezes the run until a person decides
+
+  tools/                 one module per domain, plus the registry
+    behaviour_tools.py   7 tools    network_tools.py      3 tools
+    context_tools.py     4 tools    disposition_tools.py  3 tools, writes only
+    __init__.py          TOOLSETS, READ_TOOLS, check_isolation()
+
+  policies/              five editable .md documents with YAML front-matter
+  sweep.py               run_case / resume_case, and the three sweep tools
+  analysis.py            tokens, the isolation boundary, the single-agent model
+  reports.py             the four generated deliverables
+  transcripts.py         the approve and reject transcripts
+  cli.py                 the operator surface
+
+notebooks/               01-06, one concept each
+tests/                   76 conformance tests, all offline
+docs/transcripts/        approve and reject, from real runs
+data/sentinel.db         read-only, hash-verified
+runtime/                 everything written at run time (gitignored)
 ```
+
+---
+
+## The API, in one table
+
+Everything worth calling, and where it lives.
+
+### Reading the bank's data — no model involved
+
+| | |
+|---|---|
+| `db.read_only()` | context manager, `mode=ro` + `PRAGMA query_only`. A write raises. |
+| `db.query(sql, params)` / `db.query_one(...)` | one SELECT against the source database |
+| `db.source_hash()` | SHA-256, so a run can prove the file is untouched |
+| `db.init_runtime()` / `reset_runtime()` / `write()` / `fetch()` / `now()` | the runtime database |
+| `queries.alerted_accounts()` | the work list, 276 ids |
+| `queries.incident_window(account_id)` | `(start, end)` spanning the alerts **and** their trigger transactions |
+| `queries.get_case_notes(account_id)` | notes with a `timing` label computed in SQL |
+| `queries.get_*` (14 more) | one function per question, grouped by domain |
+
+### Deciding
+
+| | |
+|---|---|
+| `validation.EvidenceRef(kind, ref_id, quote)` | one citation |
+| `validation.Disposition(...)` | a verdict and the evidence it rests on |
+| `validation.check_shape / check_ownership / check_quote` | the three layers, in the order they fire |
+| `validation.validate(disposition)` | every check; returns the problems, empty means it may be filed |
+| `validation.check_action(action, verdict)` | refuses an action that contradicts its own verdict |
+| `agents.build_system(...)` | assembles all five agents, returns `(supervisor, parts)` |
+| `agents.<name>.build(model)` | one specialist, for a notebook that wants to run it alone |
+| `agents.supervisor.build(model, specialists)` | the four wrappers and the supervisor |
+
+### Middleware
+
+| | |
+|---|---|
+| `middleware.PolicyMiddleware` | puts the catalog in the prompt, freshly, every model call |
+| `middleware.load_policy` | pulls one document in, and records that it was loaded |
+| `middleware.PolicyGateMiddleware` | returns an error instead of running a gated write |
+| `middleware.approval_middleware()` | interrupts before anything irreversible; approve/reject only |
+| `middleware.discover_policies()` | re-scans the directory, so an edit needs no restart |
+| `middleware.disclosure_stats()` | how much of the corpus is withheld |
+
+### Running and reporting
+
+| | |
+|---|---|
+| `sweep.run_case(account_id, auto=False)` | one account; returns `done` or `awaiting_approval` |
+| `sweep.resume_case(thread_id, approve=...)` | thaws a paused run, either way |
+| `sweep.start_queue_sweep(limit, workers, skip_done)` | returns a job id in milliseconds |
+| `sweep.check_sweep_status(job_id)` | progress, never blocks |
+| `sweep.collect_sweep_results(job_id)` | the verdicts so far |
+| `sweep.wait_for_sweep(job_id)` | optional block, kept separate from starting |
+| `analysis.isolation_report()` | produced against crossed, and the discard rate |
+| `analysis.token_report()` | the ledger, summed, with the money attached |
+| `analysis.single_agent_estimate()` | the counterfactual, modelled from measured content |
+| `reports.main()` | writes all four deliverables |
+| `transcripts.main(account_id)` | runs the gate both ways, writes both transcripts |
 
 ---
 

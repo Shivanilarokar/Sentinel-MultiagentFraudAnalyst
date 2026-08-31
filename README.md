@@ -55,11 +55,18 @@ sentinel sweep                           # all 276 in the background, job id imm
 
 ## Architecture
 
+![architecture](docs/architecture.png)
+
 ```
 Layer 3   supervisor          decides who to ask, and in what order
 Layer 2   four specialists    natural language in, natural language out
 Layer 1   SQLite-backed tools exact arguments, real rows
 ```
+
+One thing the diagram draws the other way round: the queue sweep is not something
+the supervisor calls. The sweep **drives** the supervisor, one isolated
+invocation per account, and the three sweep tools sit on the operator surface.
+Hanging them off the supervisor would let it start a sweep of itself.
 
 The one architectural move that creates this shape is `@tool` wrapping an agent's
 `.invoke()`. Everything else is prompt and plumbing.

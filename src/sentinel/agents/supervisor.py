@@ -32,6 +32,7 @@ from langgraph.types import Command
 from sentinel import db
 from sentinel.config import date_context
 from sentinel.middleware import SupervisorState
+from sentinel.tools.queue_tools import QUEUE_TOOLS
 
 PROMPT = (
     "You are the duty analyst on Sentinel Bank's fraud desk.\n\n"
@@ -230,11 +231,15 @@ def build(model, specialists: dict, *, checkpointer=None):
             extra=f"## The specialists reported:\n\n{gathered}",
         )
 
+    # Four specialists, plus the three that operate on the queue as a whole.
+    # The queue tools refuse to run inside a sweep, so a sweep cannot fork
+    # another one.
     tools = [
         consult_behaviour_analyst,
         consult_context_specialist,
         consult_network_analyst,
         consult_disposition_officer,
+        *QUEUE_TOOLS,
     ]
 
     supervisor = create_agent(

@@ -60,10 +60,15 @@ def test_the_supervisor_module_cannot_reach_the_database():
     """Parsed, not grepped: no import path from the supervisor to any query."""
     imports = _imported_modules(SRC / "agents" / "supervisor.py")
     assert "sentinel.queries" not in imports
-    assert not any(i.startswith("sentinel.tools") for i in imports), imports
+
+    # It may reach the queue tools, which schedule work rather than read rows.
+    # It may not reach any toolset that touches the bank's data.
+    for domain in ("behaviour_tools", "context_tools", "network_tools",
+                   "disposition_tools"):
+        assert not any(domain in i for i in imports), imports
 
 
-def test_the_supervisor_holds_exactly_four_tools():
+def _supervisor_tools():
     from sentinel.agents.supervisor import build
 
     class _FakeAgent:
@@ -73,11 +78,39 @@ def test_the_supervisor_holds_exactly_four_tools():
     specialists = {n: _FakeAgent() for n in
                    ("behaviour", "context", "network", "disposition")}
     _, tools = build(model=None, specialists=specialists)
-    assert len(tools) == 4
-    assert {t.name for t in tools} == {
+    return tools
+
+
+def test_the_supervisor_holds_one_tool_per_specialist():
+    assert {t.name for t in _supervisor_tools()} >= {
         "consult_behaviour_analyst", "consult_context_specialist",
         "consult_network_analyst", "consult_disposition_officer",
     }
+
+
+def test_the_supervisor_also_drives_the_queue():
+    """The sweep is something the supervisor starts, not something that calls it."""
+    assert {t.name for t in _supervisor_tools()} >= {
+        "start_queue_sweep", "check_sweep_status", "collect_sweep_results",
+    }
+
+
+def test_the_supervisor_holds_nothing_else():
+    assert len(_supervisor_tools()) == 7
+
+
+def test_a_sweep_cannot_start_another_sweep():
+    """Every account inside a sweep runs its own supervisor, which holds these
+    tools too. Without the guard the first sweep forks a second."""
+    from sentinel.tools.queue_tools import QUEUE_TOOLS
+
+    class _Runtime:
+        state = {"unattended": True}
+        tool_call_id = "x"
+
+    for tool in QUEUE_TOOLS:
+        args = (_Runtime(), 0) if tool.name == "start_queue_sweep" else ("job-1", _Runtime())
+        assert "REFUSED" in tool.func(*args)
 
 
 def test_every_specialist_lives_in_its_own_module():

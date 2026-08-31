@@ -63,10 +63,12 @@ Layer 2   four specialists    natural language in, natural language out
 Layer 1   SQLite-backed tools exact arguments, real rows
 ```
 
-One thing the diagram draws the other way round: the queue sweep is not something
-the supervisor calls. The sweep **drives** the supervisor, one isolated
-invocation per account, and the three sweep tools sit on the operator surface.
-Hanging them off the supervisor would let it start a sweep of itself.
+The supervisor holds seven tools: one per specialist, and three that operate on
+the queue as a whole. Not one of them touches the database.
+
+A sweep works each account through a supervisor of its own, and that supervisor
+holds these tools too — so `start_queue_sweep` refuses when it finds itself
+already inside a sweep. Without that guard the first sweep would fork a second.
 
 The one architectural move that creates this shape is `@tool` wrapping an agent's
 `.invoke()`. Everything else is prompt and plumbing.
@@ -150,7 +152,7 @@ places, so it is asserted rather than trusted.
 
 ### A supervisor that routes and nothing else
 
-Four tools, no database access, and the ordering is enforced rather than requested:
+No database access, and the ordering is enforced rather than requested:
 `consult_disposition_officer` inspects `specialists_consulted` and returns an error
 `ToolMessage` if Context has not been asked yet.
 
@@ -160,8 +162,9 @@ Four tools, no database access, and the ordering is enforced rather than request
 
 ### The sweep returns before it finishes
 
-The three-tool pattern: `start_queue_sweep`, `check_sweep_status`,
-`collect_sweep_results` (`src/sentinel/sweep.py`).
+Three tools on the supervisor — `start_queue_sweep`, `check_sweep_status`,
+`collect_sweep_results` (`src/sentinel/tools/queue_tools.py`) — wrapping the
+machinery in `src/sentinel/sweep.py`.
 
 Starting a sweep does three cheap things — one `SELECT DISTINCT account_id FROM
 alerts`, one job row, one `Thread.start()` — and returns.
@@ -342,6 +345,7 @@ src/sentinel/
   tools/                 one module per domain, plus the registry
     behaviour_tools.py   7 tools    network_tools.py      3 tools
     context_tools.py     4 tools    disposition_tools.py  3 tools, writes only
+    queue_tools.py       3 tools    start / status / collect, on the supervisor
     __init__.py          TOOLSETS, READ_TOOLS, check_isolation()
 
   policies/              five editable .md documents with YAML front-matter

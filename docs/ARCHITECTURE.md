@@ -23,11 +23,11 @@ way:
 1. **The network analyst loads policy too.** Telling a mule ring from a family
    tablet is a judgement call, not a count, so it needs the same documents the
    other two specialists read.
-2. **The three sweep tools sit on the operator surface, not on the supervisor.**
-   The relationship runs the other way round: the sweep *drives* the supervisor,
-   one isolated invocation per account. Hanging them off the supervisor would
-   let it start a sweep of itself, and would push it from four tools to seven —
-   at which point it is no longer routing, it is orchestrating.
+2. **The sweep tools sit on the supervisor, and refuse to recurse.** A sweep
+   works each account through a supervisor of its own, and that supervisor holds
+   `start_queue_sweep` as well. Each queue tool therefore checks `unattended`
+   and refuses; without the guard the first sweep forks a second, and that one
+   forks a third.
 
 ---
 

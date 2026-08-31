@@ -33,18 +33,12 @@ import threading
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import Command
 
 from sentinel import db, queries
 from sentinel.agents import build_system
 from sentinel.config import CHECKPOINT_DB, SWEEP_WORKERS
-
-
-def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
 
 
 def _checkpointer() -> SqliteSaver:
@@ -205,7 +199,7 @@ def start_queue_sweep(limit: int | None = None, workers: int | None = None,
     db.write(
         "INSERT INTO sweep_jobs (job_id, status, total, started_at) "
         "VALUES (?, 'running', ?, ?)",
-        (job_id, len(accounts), _now()),
+        (job_id, len(accounts), db.now()),
     )
 
     thread = threading.Thread(
@@ -314,15 +308,15 @@ def _run_sweep(job_id: str, accounts: list[str], workers: int) -> None:
             db.write(
                 "INSERT INTO findings (account_id, specialist, finding, recorded_at) "
                 "VALUES (?, 'error', ?, ?)",
-                (account_id, traceback.format_exc()[-2000:], _now()))
+                (account_id, traceback.format_exc()[-2000:], db.now()))
 
     try:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             list(pool.map(work, accounts))
         db.write(
             "UPDATE sweep_jobs SET status = 'done', finished_at = ? WHERE job_id = ?",
-            (_now(), job_id))
+            (db.now(), job_id))
     except Exception as exc:
         db.write(
             "UPDATE sweep_jobs SET status = 'failed', error = ?, finished_at = ? "
-            "WHERE job_id = ?", (str(exc)[:500], _now(), job_id))
+            "WHERE job_id = ?", (str(exc)[:500], db.now(), job_id))

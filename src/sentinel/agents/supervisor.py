@@ -24,8 +24,6 @@ Three consequences fall straight out of that:
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from langchain.agents import create_agent
 from langchain.messages import ToolMessage
 from langchain.tools import ToolRuntime, tool
@@ -93,8 +91,7 @@ def _record_usage(result: dict, agent: str, account_id: str) -> None:
             "INSERT INTO token_ledger (account_id, agent, input_tokens, "
             "output_tokens, model_calls, tool_calls, recorded_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (account_id, agent, tokens_in, tokens_out, calls, tool_calls,
-             datetime.now().isoformat(timespec="seconds")),
+            (account_id, agent, tokens_in, tokens_out, calls, tool_calls, db.now()),
         )
 
 
@@ -103,7 +100,7 @@ def _record_finding(account_id: str, specialist: str, finding: str) -> None:
     db.write(
         "INSERT INTO findings (account_id, specialist, finding, recorded_at) "
         "VALUES (?, ?, ?, ?)",
-        (account_id, specialist, finding, datetime.now().isoformat(timespec="seconds")),
+        (account_id, specialist, finding, db.now()),
     )
 
 

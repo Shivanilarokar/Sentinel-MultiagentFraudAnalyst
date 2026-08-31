@@ -22,7 +22,6 @@ than after a restart.
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import Callable, TypedDict
 
@@ -125,7 +124,7 @@ def load_policy(policy_name: str, runtime: ToolRuntime) -> Command:
                     runtime.state.get("account_id"),
                     getattr(runtime, "agent_name", None) or "specialist",
                     policy_name,
-                    datetime.now().isoformat(timespec="seconds"),
+                    db.now(),
                 ),
             )
             return Command(update={

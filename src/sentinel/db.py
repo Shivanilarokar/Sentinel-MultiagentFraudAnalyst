@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from datetime import datetime
 from contextlib import contextmanager
 from collections.abc import Generator
 
@@ -38,6 +39,15 @@ def query_one(sql: str, params: tuple | dict = ()) -> sqlite3.Row | None:
     """Run one SELECT and return the first row, or None."""
     rows = query(sql, params)
     return rows[0] if rows else None
+
+
+def now() -> str:
+    """The timestamp every runtime row is written with.
+
+    One definition, because three modules were each carrying their own copy of
+    `datetime.now().isoformat(timespec="seconds")` and they only have to agree.
+    """
+    return datetime.now().isoformat(timespec="seconds")
 
 
 def source_hash() -> str:

@@ -21,15 +21,10 @@ Every write goes to `runtime/actions.db`. Nothing here can touch the bank's data
 from __future__ import annotations
 
 import json
-from datetime import datetime
 
 from langchain.tools import ToolRuntime, tool
 
 from sentinel import db, validation
-
-
-def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
 
 
 def _parse_evidence(evidence: str) -> tuple[list[validation.EvidenceRef], str | None]:
@@ -127,7 +122,7 @@ def record_disposition(
             missing=excluded.missing, decided_at=excluded.decided_at
         """,
         (account_id, verdict, confidence, reasoning,
-         json.dumps([r.as_dict() for r in refs]), missing, _now()),
+         json.dumps([r.as_dict() for r in refs]), missing, db.now()),
     )
     return (
         f"RECORDED: {account_id} disposed as {verdict} ({confidence} confidence), "
@@ -169,7 +164,7 @@ def _file_action(account_id: str, action: str, target: str, reason: str,
         "INSERT INTO actions (account_id, action, target, reason, status, "
         "approved_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         (account_id, action, target, reason, status,
-         None if unattended else "analyst", _now()),
+         None if unattended else "analyst", db.now()),
     )
 
     if unattended:

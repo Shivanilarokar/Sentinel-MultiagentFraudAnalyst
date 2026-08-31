@@ -43,6 +43,15 @@ def agent_model(agent: str) -> str:
 ALERTED_ACCOUNTS = 276
 
 
+def accounts_measured() -> int:
+    """How many distinct accounts the ledger covers.
+
+    Every per-account figure divides by this, so it is read once rather than
+    re-queried at each call site where it could drift.
+    """
+    return db.fetch("SELECT COUNT(DISTINCT account_id) n FROM token_ledger")[0]["n"] or 1
+
+
 def cost(model: str, tokens_in: int, tokens_out: int) -> float:
     """USD for a given number of tokens on a given model."""
     p = PRICING.get(model, PRICING["gpt-4.1-mini"])
@@ -70,8 +79,7 @@ def isolation_report(account_id: str | None = None) -> dict:
         f"FROM findings {where} GROUP BY specialist", params)
     produced = db.fetch(
         f"SELECT agent, SUM(input_tokens) tin, SUM(output_tokens) tout, COUNT(*) n "
-        f"FROM token_ledger {where.replace('account_id', 'account_id')} "
-        f"GROUP BY agent", params)
+        f"FROM token_ledger {where} GROUP BY agent", params)
 
     crossed_chars = sum(r["chars"] for r in crossed)
     produced_tokens = sum(r["tin"] for r in produced)
@@ -94,7 +102,7 @@ def token_report() -> dict:
     """The ledger, summed per agent, with the money attached."""
     rows = db.fetch(
         "SELECT agent, SUM(input_tokens) tin, SUM(output_tokens) tout, "
-        "COUNT(*) calls, COUNT(DISTINCT account_id) accounts "
+        "COUNT(*) calls "
         "FROM token_ledger GROUP BY agent")
 
     agents = {}
@@ -108,8 +116,7 @@ def token_report() -> dict:
             "cost": cost(model, r["tin"], r["tout"]),
         }
 
-    accounts = db.fetch(
-        "SELECT COUNT(DISTINCT account_id) n FROM token_ledger")[0]["n"] or 1
+    accounts = accounts_measured()
     total_in = sum(a["input"] for a in agents.values())
     total_out = sum(a["output"] for a in agents.values())
     total_cost = sum(a["cost"] for a in agents.values())
@@ -155,8 +162,7 @@ def single_agent_estimate() -> dict:
     if not rows:
         return {}
 
-    accounts = db.fetch(
-        "SELECT COUNT(DISTINCT account_id) n FROM token_ledger")[0]["n"] or 1
+    accounts = accounts_measured()
 
     # For one context: with T model calls over content that grows to C tokens,
     # the input summed across calls is about C * (T + 1) / 2. Invert that to

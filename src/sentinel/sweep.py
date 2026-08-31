@@ -169,7 +169,8 @@ def _shape(result: dict, account_id: str, thread_id: str) -> dict:
 # ===========================================================================
 # The queue sweep: three tools
 # ===========================================================================
-def start_queue_sweep(limit: int | None = None, workers: int | None = None) -> str:
+def start_queue_sweep(limit: int | None = None, workers: int | None = None,
+                      skip_done: bool = True) -> str:
     """Start working the whole queue in the background. Returns a job id at once.
 
     This function does three cheap things and returns: one SELECT DISTINCT for
@@ -181,6 +182,9 @@ def start_queue_sweep(limit: int | None = None, workers: int | None = None) -> s
         limit: Work only the first N accounts. Use this while developing.
         workers: How many accounts to run concurrently. Each gets its own
             supervisor invocation and its own message list; they share nothing.
+        skip_done: Work only accounts with no verdict yet, so a sweep can be
+            re-run to pick up whatever the last one dropped. Set False to redo
+            the whole queue from scratch.
 
     Returns:
         The job id, to pass to `check_sweep_status` and `collect_sweep_results`.
@@ -188,6 +192,14 @@ def start_queue_sweep(limit: int | None = None, workers: int | None = None) -> s
     accounts = queries.alerted_accounts()
     if limit:
         accounts = accounts[:limit]
+
+    if skip_done:
+        # A sweep over hundreds of accounts will lose some to a rate limit or a
+        # transient API error. Re-running the whole queue to recover a handful
+        # costs the same as the first run, so by default we work only what has
+        # no verdict yet. Pass skip_done=False to redo everything.
+        done = {r["account_id"] for r in db.fetch("SELECT account_id FROM dispositions")}
+        accounts = [a for a in accounts if a not in done]
 
     job_id = f"sweep-{uuid.uuid4().hex[:12]}"
     db.write(

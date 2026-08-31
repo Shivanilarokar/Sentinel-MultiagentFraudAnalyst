@@ -49,6 +49,15 @@ SUPERVISOR_MODEL = os.getenv("SENTINEL_SUPERVISOR_MODEL", "gpt-4.1")
 
 SWEEP_WORKERS = int(os.getenv("SENTINEL_SWEEP_WORKERS", "6"))
 
+# Model calls per second, across the whole process.
+#
+# The real constraint is tokens per minute, not requests, but requests are what
+# a limiter can actually pace. One specialist call costs roughly 5,000 tokens,
+# so on a 200,000 TPM account about 0.65 requests per second is the sustainable
+# rate. Raise it if your account allows more; the sweep will simply finish
+# sooner. Set it too high and workers collide on 429s and lose whole accounts.
+REQUESTS_PER_SECOND = float(os.getenv("SENTINEL_REQUESTS_PER_SECOND", "0.65"))
+
 LANGSMITH_ENABLED = os.getenv("LANGSMITH_TRACING", "").lower() == "true"
 
 # ---------------------------------------------------------------------------

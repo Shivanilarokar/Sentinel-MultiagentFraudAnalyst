@@ -13,10 +13,43 @@ three narrative tests should not mean scrolling past the behaviour analyst.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 from langchain.chat_models import init_chat_model
+from langchain_core.rate_limiters import InMemoryRateLimiter
 
 from sentinel.agents import behaviour, context, disposition, network, supervisor
-from sentinel.config import SPECIALIST_MODEL, SUPERVISOR_MODEL, require_openai_key
+from sentinel.config import (
+    REQUESTS_PER_SECOND,
+    SPECIALIST_MODEL,
+    SUPERVISOR_MODEL,
+    require_openai_key,
+)
+
+# One limiter, shared by every agent in the process.
+#
+# The account's ceiling is tokens per minute, and a sweep spends it from several
+# worker threads at once. Retries alone do not help: each worker backs off
+# independently, they collide again on the way back up, and a burst of 429s
+# kills accounts that were halfway through. A limiter in front of the model
+# paces the whole process instead, so the ceiling is never reached.
+_LIMITER = InMemoryRateLimiter(
+    requests_per_second=REQUESTS_PER_SECOND,
+    check_every_n_seconds=0.1,
+    max_bucket_size=4,          # a small burst is fine; a sustained one is not
+)
+
+
+@lru_cache(maxsize=8)
+def _model(name: str):
+    """One instance per model name, so they share the limiter above.
+
+    Building a fresh model per account would give each its own limiter, which is
+    the same as having none.
+    """
+    return init_chat_model(
+        name, model_provider="openai", max_retries=8, rate_limiter=_LIMITER,
+    )
 
 
 def build_system(
@@ -51,14 +84,8 @@ def build_system(
             layer without rebuilding the rest.
     """
     require_openai_key()
-
-    # A 429 is an expected part of running a queue concurrently against a
-    # per-minute token ceiling, not a failure. Without retries the first burst
-    # kills most of the queue.
-    fast = init_chat_model(specialist_model or SPECIALIST_MODEL,
-                           model_provider="openai", max_retries=8)
-    strong = init_chat_model(supervisor_model or SUPERVISOR_MODEL,
-                             model_provider="openai", max_retries=8)
+    fast = _model(specialist_model or SPECIALIST_MODEL)
+    strong = _model(supervisor_model or SUPERVISOR_MODEL)
 
     specialists = {
         "behaviour": behaviour.build(fast),
